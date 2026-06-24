@@ -23,7 +23,14 @@ if (!supabaseUrl || !supabaseKey) {
 let supabase = null;
 
 try {
-  supabase = createClient(supabaseUrl, supabaseKey);
+  supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      headers: { 'x-connection-pool': 'true' },
+      fetch: (url, options) => fetch(url, { ...options, keepalive: true }),
+    },
+    db: { schema: 'public' },
+  });
   console.log('✅ Supabase client initialized successfully');
   
   // Test connection immediately with better error diagnostics

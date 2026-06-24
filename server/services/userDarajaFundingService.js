@@ -16,41 +16,24 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 async function resolveDarajaPaymentType({ checkoutRequestId, externalReference, cachedPaymentType }) {
   if (cachedPaymentType) return cachedPaymentType;
 
-  const queries = [];
+  // Run all lookups in parallel for speed
+  const lookups = [];
   if (checkoutRequestId) {
-    queries.push({ field: 'checkout_request_id', value: checkoutRequestId });
+    lookups.push(
+      supabase.from('activation_fees').select('fee_type').eq('checkout_request_id', checkoutRequestId).maybeSingle()
+        .then(({ data }) => data?.fee_type || null).catch(() => null)
+    );
   }
   if (externalReference) {
-    queries.push({ field: 'external_reference', value: externalReference });
+    lookups.push(
+      supabase.from('activation_fees').select('fee_type').eq('external_reference', externalReference).maybeSingle()
+        .then(({ data }) => data?.fee_type || null).catch(() => null)
+    );
   }
 
-  for (const query of queries) {
-    try {
-      const { data: fee, error: feeError } = await supabase
-        .from('activation_fees')
-        .select('fee_type')
-        .eq(query.field, query.value)
-        .maybeSingle();
-      if (!feeError && fee?.fee_type) {
-        return fee.fee_type;
-      }
-    } catch (e) {
-      console.warn('[resolveDarajaPaymentType] activation_fees lookup error:', e.message);
-    }
-
-    try {
-      const { data: deposit, error: depositError } = await supabase
-        .from('deposits')
-        .select('id')
-        .eq(query.field, query.value)
-        .maybeSingle();
-      if (!depositError && deposit) {
-        return 'deposit';
-      }
-    } catch (e) {
-      console.warn('[resolveDarajaPaymentType] deposits lookup error:', e.message);
-    }
-  }
+  const results = await Promise.all(lookups);
+  const feeType = results.find(Boolean);
+  if (feeType) return feeType;
 
   return 'deposit';
 }
@@ -102,15 +85,6 @@ async function registerUserDarajaAttempt({
     return { success: true, transaction: existing };
   }
 
-  // Fetch current balance for balance_before / balance_after
-  const { data: userRow } = await supabase
-    .from('users')
-    .select('account_balance')
-    .eq('id', userId)
-    .maybeSingle();
-
-  const currentBalance = parseFloat(userRow?.account_balance) || 0;
-
   const methodLabel =
     paymentType === 'activation' ? 'Withdrawal Activation (Daraja)'
     : paymentType === 'priority'   ? 'Priority Fee (Daraja)'
@@ -132,8 +106,6 @@ async function registerUserDarajaAttempt({
     external_reference: externalReference,
     checkout_request_id: checkoutRequestId,
     description,
-    balance_before: currentBalance,
-    balance_after: currentBalance + depositAmount,
     created_at: timestamp,
     updated_at: timestamp,
   };
@@ -304,18 +276,21 @@ async function ensureUserDarajaFunding({
   const completedTx = updatedRows[0];
 
   const cached = paymentCache.getPayment(checkoutRequestId);
-  const paymentType = await resolveDarajaPaymentType({
-    checkoutRequestId,
-    externalReference: completedTx.external_reference,
-    cachedPaymentType: cached?.payment_type || cached?.paymentType
-  });
 
-  // Fetch user for balance update
-  const { data: user, error: userError } = await supabase
-    .from('users')
-    .select('account_balance, stakeable_balance, withdrawable_balance, username, phone_number')
-    .eq('id', completedTx.user_id)
-    .single();
+  // Parallelize payment type resolution + user fetch — both are independent after the atomic claim
+  const [paymentType, userResult] = await Promise.all([
+    resolveDarajaPaymentType({
+      checkoutRequestId,
+      externalReference: completedTx.external_reference,
+      cachedPaymentType: cached?.payment_type || cached?.paymentType
+    }),
+    supabase.from('users')
+      .select('account_balance, stakeable_balance, withdrawable_balance, username, phone_number')
+      .eq('id', completedTx.user_id)
+      .single(),
+  ]);
+
+  const { data: user, error: userError } = userResult;
 
   if (userError || !user) {
     // Roll back transaction status
@@ -404,44 +379,21 @@ async function ensureUserDarajaFunding({
     }
   }
 
-  // Send admin notification for all payment types (fire-and-forget but with logging)
-  try {
-    const smsPhone = completedTx.phone_number || user.phone_number || cached?.phone_number || phoneNumber;
-    if (smsPhone) {
-      console.log(`[ensureUserDarajaFunding] 🔔 Preparing admin notification for ${paymentType}`);
-      console.log(`[ensureUserDarajaFunding] SMS Phone: ${smsPhone}, User: ${user.username}`);
-      
-      // Calculate total revenue from all completed deposits and fees
-      const { data: totalRevenueData, error: revenueError } = await supabase
-        .from('transactions')
-        .select('amount')
-        .eq('status', 'completed')
-        .in('type', ['deposit']);
-      
-      const totalRevenue = !revenueError && totalRevenueData 
-        ? totalRevenueData.reduce((sum, tx) => sum + parseFloat(tx.amount || 0), 0)
-        : 0;
-      
-      console.log(`[ensureUserDarajaFunding] 💰 Total revenue calculated: KSH ${totalRevenue}`);
-      console.log(`[ensureUserDarajaFunding] 📝 M-Pesa Receipt: ${mpesaReceipt || 'N/A'}`);
-      
-      const username = user.username || 'Unknown User';
-      console.log(`[ensureUserDarajaFunding] 📞 CALLING sendAdminDepositNotification...`);
-      
-      const smsResult = await sendAdminDepositNotification(smsPhone, username, creditedAmount, paymentType, totalRevenue, mpesaReceipt);
-      
-      console.log(`[ensureUserDarajaFunding] 📨 SMS Result: ${smsResult}`);
-      if (smsResult) {
-        console.log(`✅ [ensureUserDarajaFunding] Admin notification SMS sent successfully for ${paymentType} (Code: ${mpesaReceipt || 'N/A'})`);
-      } else {
-        console.error(`❌ [ensureUserDarajaFunding] Admin notification SMS FAILED for ${paymentType}`);
-      }
-    } else {
-      console.error(`[ensureUserDarajaFunding] ❌ No phone number available for admin notification (user ${completedTx.user_id})`);
-    }
-  } catch (adminNotifErr) {
-    console.error('[ensureUserDarajaFunding] ❌ Admin notification EXCEPTION:', adminNotifErr.message);
-    console.error('[ensureUserDarajaFunding] Stack:', adminNotifErr.stack);
+  // Admin notification — fire-and-forget so it never blocks the balance credit return
+  const smsPhoneForAdmin = completedTx.phone_number || user.phone_number || cached?.phone_number || phoneNumber;
+  if (smsPhoneForAdmin) {
+    const usernameForAdmin = user.username || 'Unknown User';
+    // Revenue query + SMS send both non-blocking
+    supabase.from('transactions').select('amount').eq('status', 'completed').eq('type', 'deposit')
+      .then(({ data: revenueData }) => {
+        const totalRevenue = revenueData ? revenueData.reduce((s, tx) => s + parseFloat(tx.amount || 0), 0) : 0;
+        return sendAdminDepositNotification(smsPhoneForAdmin, usernameForAdmin, creditedAmount, paymentType, totalRevenue, mpesaReceipt);
+      })
+      .then((sent) => {
+        if (sent) console.log(`✅ [ensureUserDarajaFunding] Admin SMS sent for ${paymentType} (${mpesaReceipt || 'N/A'})`);
+        else console.error(`❌ [ensureUserDarajaFunding] Admin SMS FAILED for ${paymentType}`);
+      })
+      .catch((e) => console.error('[ensureUserDarajaFunding] Admin notification error:', e.message));
   }
 
   console.log(`✅ [ensureUserDarajaFunding] User ${completedTx.user_id} credited KSH ${creditedAmount} (${paymentType}). New balance: ${newBalance}`);
