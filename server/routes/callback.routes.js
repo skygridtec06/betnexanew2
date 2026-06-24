@@ -488,6 +488,9 @@ router.post('/daraja-admin-test', async (req, res) => {
 
     console.log('\n🔔 Daraja Admin Test Callback Received:', JSON.stringify(req.body, null, 2));
 
+    // Respond to Safaricom immediately — prevents timeout and retry loops
+    res.json({ ResponseCode: '00000000', ResponseDesc: 'Accepted' });
+
     if (checkoutRequestId) {
       const isCancelled = `${resultCode}` === '1032' || /cancel|insufficient\s*funds|balance\s+is\s+insufficient/i.test(`${resultDesc || ''}`);
       const normalizedStatus = `${resultCode}` === '0'
@@ -520,11 +523,11 @@ router.post('/daraja-admin-test', async (req, res) => {
         }
       }
     }
-
-    res.json({ ResponseCode: '00000000', ResponseDesc: 'Accepted' });
   } catch (error) {
     console.error('Daraja admin test callback error:', error.message || error);
-    res.status(200).json({ ResponseCode: '00000000', ResponseDesc: 'Accepted with error' });
+    if (!res.headersSent) {
+      res.status(200).json({ ResponseCode: '00000000', ResponseDesc: 'Accepted with error' });
+    }
   }
 });
 
@@ -548,7 +551,11 @@ router.post('/daraja-user', async (req, res) => {
       return acc;
     }, {});
 
-    console.log('\n\uD83D\uDD14 Daraja User Callback Received:', JSON.stringify(req.body, null, 2));
+    console.log('\n🔔 Daraja User Callback Received:', JSON.stringify(req.body, null, 2));
+
+    // Respond to Safaricom immediately — prevents their timeout (8s) and retry loops
+    // Vercel keeps the async handler alive until the Promise resolves, so processing continues.
+    res.json({ ResponseCode: '00000000', ResponseDesc: 'Accepted' });
 
     if (checkoutRequestId) {
       const isCancelled = `${resultCode}` === '1032'
@@ -581,7 +588,7 @@ router.post('/daraja-user', async (req, res) => {
         if (!fundingResult.success) {
           console.error('User Daraja funding error in callback:', fundingResult.error || 'Unknown error');
         } else {
-          console.log(`\u2705 User Daraja callback: Credited KSH ${fundingResult.creditedAmount} to user ${fundingResult.userId}. New balance: ${fundingResult.newBalance}`);
+          console.log(`✅ User Daraja callback: Credited KSH ${fundingResult.creditedAmount} to user ${fundingResult.userId}. New balance: ${fundingResult.newBalance}`);
         }
       } else {
         const terminalStatus = normalizedStatus === 'Cancelled' ? 'cancelled' : 'failed';
@@ -602,11 +609,11 @@ router.post('/daraja-user', async (req, res) => {
         }
       }
     }
-
-    res.json({ ResponseCode: '00000000', ResponseDesc: 'Accepted' });
   } catch (error) {
     console.error('Daraja user callback error:', error.message || error);
-    res.status(200).json({ ResponseCode: '00000000', ResponseDesc: 'Accepted with error' });
+    if (!res.headersSent) {
+      res.status(200).json({ ResponseCode: '00000000', ResponseDesc: 'Accepted with error' });
+    }
   }
 });
 
