@@ -94,11 +94,11 @@ export function OddsProvider({ children }: { children: ReactNode }) {
       console.log('🔄 Fetching fresh games from:', apiUrl);
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 second timeout
 
-      const response = await fetch(`${apiUrl}/api/admin/games?_t=${Date.now()}`, {
+      const response = await fetch(`${apiUrl}/api/admin/games`, {
         signal: controller.signal,
-        cache: 'no-store',
+        keepalive: true,
       });
 
       clearTimeout(timeoutId);
@@ -321,9 +321,9 @@ export function OddsProvider({ children }: { children: ReactNode }) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000);
         
-        const response = await fetch(`${apiUrl}/api/admin/games?_t=${Date.now()}`, {
+        const response = await fetch(`${apiUrl}/api/admin/games`, {
           signal: controller.signal,
-          cache: 'no-store',
+          keepalive: true,
         });
         
         clearTimeout(timeoutId);
@@ -441,11 +441,11 @@ export function OddsProvider({ children }: { children: ReactNode }) {
       const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 second timeout
 
-      const response = await fetch(`${apiUrl}/api/admin/games?_t=${Date.now()}`, {
+      const response = await fetch(`${apiUrl}/api/admin/games`, {
         signal: controller.signal,
-        cache: 'no-store',
+        keepalive: true,
       });
 
       clearTimeout(timeoutId);

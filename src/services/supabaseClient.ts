@@ -15,9 +15,15 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
     headers: {
       'X-Client-Info': 'betnexa-web/1.0',
     },
+    fetch: (url: RequestInfo | URL, options?: RequestInit) =>
+      fetch(url, { ...options, keepalive: true }),
   },
   db: {
     schema: 'public',
+  },
+  realtime: {
+    // Disable realtime WebSocket — avoids unnecessary connection on page load
+    params: { eventsPerSecond: 0 },
   },
 });
 

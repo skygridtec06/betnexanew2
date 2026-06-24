@@ -28,7 +28,16 @@ import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import PriorityWithdrawal from "./pages/PriorityWithdrawal";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30 * 1000,      // data stays fresh for 30s — no refetch on remount
+      gcTime: 5 * 60 * 1000,    // keep in memory for 5 minutes
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Loading fallback component
 const LoadingPage = () => (

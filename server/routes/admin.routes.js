@@ -903,173 +903,61 @@ router.get('/debug/games', async (req, res) => {
 // GET: Fetch all games
 router.get('/games', async (req, res) => {
   try {
-    console.log(`\n📊 [GET /api/admin/games] Fetching all games...`);
-    
     if (!supabase) {
-      console.error('❌ Supabase client is not initialized');
-      console.error('   SUPABASE_URL:', process.env.SUPABASE_URL ? '✓ set' : '❌ NOT SET');
-      console.error('   SUPABASE_SERVICE_KEY:', process.env.SUPABASE_SERVICE_KEY ? '✓ set' : '❌ NOT SET');
-      console.error('   SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? '✓ set' : '❌ NOT SET');
-      return res.status(503).json({ 
-        error: 'Service unavailable', 
-        details: 'Database not initialized',
-        success: false,
-        diagnostics: {
-          supabase_configured: !!supabase,
-          url_env_set: !!process.env.SUPABASE_URL,
-          key_env_set: !!process.env.SUPABASE_SERVICE_KEY
-        }
-      });
+      return res.status(503).json({ error: 'Service unavailable', details: 'Database not initialized', success: false });
     }
 
-    const { data: games, error } = await supabase
-      .from('games')
-      .select('*')
-      .order('id', { ascending: true }); // Sort by ID for stable, consistent ordering
+    // Games and markets fetched in parallel — saves one full round-trip
+    const [gamesResult, marketsResult] = await Promise.all([
+      supabase.from('games')
+        .select('id, game_id, league, home_team, away_team, home_odds, draw_odds, away_odds, scheduled_time, time, status, home_score, away_score, minute, kickoff_start_time, is_kickoff_started, game_paused, kickoff_paused_at, is_halftime')
+        .order('id', { ascending: true }),
+      supabase.from('markets')
+        .select('game_id, market_key, odds')
+        .limit(2000),
+    ]);
 
-    if (error) {
-      console.error('❌ Database query error:');
-      console.error('   Message:', error.message);
-      console.error('   Code:', error.code);
-      console.error('   Status:', error.status);
-      console.error('   Details:', error.details);
-      console.error('   Hint:', error.hint);
-      
-      // Return empty array instead of error so frontend can load
-      console.log('📋 Returning empty games array due to database error');
-      return res.json({ 
-        success: true, 
-        games: [],
-        message: 'Database temporarily unavailable, returning empty games',
-        diagnostics: {
-          error_message: error.message,
-          error_code: error.code,
-          error_status: error.status
-        }
-      });
+    if (gamesResult.error) {
+      console.error('❌ Games query error:', gamesResult.error.message);
+      return res.json({ success: true, games: [] });
     }
-    
-    console.log(`✅ Query successful, got ${(games || []).length} games`);
 
-    // Auto-cleanup: delete API-fetched (af-, ab-) games whose kickoff has passed
+    const games = gamesResult.data || [];
+
+    // Auto-cleanup expired API games — fire-and-forget so it never blocks the response
     const now = new Date();
-    const afGamesToDelete = (games || []).filter(g => {
-      if (!g.game_id) return false;
-      const isApiGame = g.game_id.startsWith('af-') || g.game_id.startsWith('ab-');
-      if (!isApiGame) return false;
-      if (g.status === 'live' || g.status === 'finished') return false;
-      const kickoff = new Date(g.time);
-      return !isNaN(kickoff.getTime()) && kickoff <= now;
-    });
+    const expiredIds = games
+      .filter(g => {
+        if (!g.game_id) return false;
+        if (!g.game_id.startsWith('af-') && !g.game_id.startsWith('ab-')) return false;
+        if (g.status === 'live' || g.status === 'finished') return false;
+        const kickoff = new Date(g.time);
+        return !isNaN(kickoff.getTime()) && kickoff <= now;
+      })
+      .map(g => g.id);
 
-    if (afGamesToDelete.length > 0) {
-      const idsToDelete = afGamesToDelete.map(g => g.id);
-      console.log(`🗑️ Auto-deleting ${idsToDelete.length} expired af- games`);
-      // Delete markets first, then games
-      await supabase.from('markets').delete().in('game_id', idsToDelete);
-      await supabase.from('games').delete().in('id', idsToDelete);
+    if (expiredIds.length > 0) {
+      Promise.all([
+        supabase.from('markets').delete().in('game_id', expiredIds),
+        supabase.from('games').delete().in('id', expiredIds),
+      ]).catch(e => console.warn('⚠️ Auto-cleanup error:', e.message));
     }
 
-    // Return remaining games (exclude the ones just deleted)
-    const deletedIds = new Set(afGamesToDelete.map(g => g.id));
-    const remainingGames = (games || []).filter(g => !deletedIds.has(g.id));
+    const expiredSet = new Set(expiredIds);
+    const remainingGames = games.filter(g => !expiredSet.has(g.id));
 
-    console.log(`✅ Retrieved ${remainingGames.length} games successfully`);
-
-    // Fetch markets for each game (paginated — Supabase returns max 1000 rows per query)
-    let gamesWithMarkets = remainingGames;
-    if (gamesWithMarkets.length > 0) {
-      try {
-        // Use only the UUID id field for marketing queries
-        const gameIds = gamesWithMarkets.map(g => g.id).filter(Boolean);
-        console.log(`   📌 Looking for markets for ${gameIds.length} games:`, gameIds.slice(0, 3).join(', '), gameIds.length > 3 ? '...' : '');
-        
-        if (gameIds.length > 0) {
-          // Paginate to get ALL markets (Supabase default limit is 1000)
-          let allMarkets = [];
-          const PAGE_SIZE = 1000;
-          let from = 0;
-          while (true) {
-            const { data: page, error: pageErr } = await supabase
-              .from('markets')
-              .select('*')
-              .in('game_id', gameIds)
-              .range(from, from + PAGE_SIZE - 1);
-
-            if (pageErr) {
-              console.warn(`⚠️ Markets fetch page error at offset ${from}:`, pageErr.message, pageErr.code);
-              break;
-            }
-            if (!page || page.length === 0) break;
-            allMarkets = allMarkets.concat(page);
-            if (page.length < PAGE_SIZE) break; // last page
-            from += PAGE_SIZE;
-          }
-
-          console.log(`   📊 Total markets fetched: ${allMarkets.length} entries`);
-          if (allMarkets.length > 0) {
-            console.log(`   Sample markets:`, allMarkets.slice(0, 5).map(m => `${m.game_id} → ${m.market_key}: ${m.odds}`).join('; '));
-          }
-
-          if (allMarkets.length > 0) {
-            // Group markets by game_id (UUID)
-            const marketsByGame = {};
-            const hotGameIds = new Set();
-            allMarkets.forEach((market) => {
-              const gameId = market.game_id;
-              if (!marketsByGame[gameId]) {
-                marketsByGame[gameId] = {};
-              }
-              // __hot is a special marker, don't expose as a normal market
-              if (market.market_key === '__hot') {
-                hotGameIds.add(gameId);
-                return;
-              }
-              if (market.market_key && market.odds !== null && market.odds !== undefined) {
-                marketsByGame[gameId][market.market_key] = parseFloat(market.odds);
-              }
-            });
-
-            console.log(`   ✅ Grouped into ${Object.keys(marketsByGame).length} games with markets, ${hotGameIds.size} hot`);
-
-            // Attach markets to each game using the UUID id field
-            gamesWithMarkets = gamesWithMarkets.map((game) => {
-              const gameMarkets = marketsByGame[game.id] || {};
-              return {
-                ...game,
-                markets: gameMarkets,
-                is_hot: hotGameIds.has(game.id)
-              };
-            });
-          } else {
-            console.log('   ⚠️ No markets found in database for these games');
-            gamesWithMarkets = gamesWithMarkets.map((game) => ({
-              ...game,
-              markets: {},
-              is_hot: false
-            }));
-          }
-        } else {
-          // No valid game IDs, add empty markets object
-          console.log('   ⚠️ No valid game IDs to query markets');
-          gamesWithMarkets = gamesWithMarkets.map((game) => ({
-            ...game,
-            markets: {},
-            is_hot: false
-          }));
-        }
-      } catch (marketError) {
-        console.warn('⚠️ Error processing markets:', marketError);
-        // Continue without markets data
-        gamesWithMarkets = gamesWithMarkets.map((game) => ({
-          ...game,
-          markets: {},
-          is_hot: false
-        }));
+    // Group markets by game_id
+    const allMarkets = marketsResult.data || [];
+    const marketsByGame = {};
+    const hotGameIds = new Set();
+    for (const market of allMarkets) {
+      if (!marketsByGame[market.game_id]) marketsByGame[market.game_id] = {};
+      if (market.market_key === '__hot') { hotGameIds.add(market.game_id); continue; }
+      if (market.market_key && market.odds != null) {
+        marketsByGame[market.game_id][market.market_key] = parseFloat(market.odds);
       }
     }
 
-    // Derive sport from game_id prefix and attach to each game
     function getSportFromGameId(gameId) {
       if (!gameId) return 'football';
       if (gameId.startsWith('ab-') || gameId.startsWith('bb-')) return 'basketball';
@@ -1079,21 +967,19 @@ router.get('/games', async (req, res) => {
       return 'football';
     }
 
-    const gamesWithSport = gamesWithMarkets.map(g => ({
+    const result = remainingGames.map(g => ({
       ...g,
-      sport: getSportFromGameId(g.game_id)
+      markets: marketsByGame[g.id] || {},
+      is_hot: hotGameIds.has(g.id),
+      sport: getSportFromGameId(g.game_id),
     }));
 
-    console.log(`✅ [GET /api/admin/games] Response ready: ${gamesWithSport.length} games with markets`);
-    res.json({ success: true, games: gamesWithSport });
+    // Cache for 5s, serve stale up to 30s while revalidating — instant for rapid refreshes
+    res.set('Cache-Control', 'public, max-age=5, stale-while-revalidate=30');
+    res.json({ success: true, games: result });
   } catch (error) {
     console.error('❌ Get games error:', error.message || error);
-    // Return empty array instead of error so frontend can load
-    res.json({ 
-      success: true, 
-      games: [],
-      message: 'Error fetching games, returning empty array'
-    });
+    res.json({ success: true, games: [] });
   }
 });
 
