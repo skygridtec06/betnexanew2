@@ -910,7 +910,7 @@ router.get('/games', async (req, res) => {
     // Games and markets fetched in parallel — saves one full round-trip
     const [gamesResult, marketsResult] = await Promise.all([
       supabase.from('games')
-        .select('id, game_id, league, home_team, away_team, home_odds, draw_odds, away_odds, scheduled_time, time, status, home_score, away_score, minute, kickoff_start_time, is_kickoff_started, game_paused, kickoff_paused_at, is_halftime')
+        .select('*')
         .order('id', { ascending: true }),
       supabase.from('markets')
         .select('game_id, market_key, odds')
@@ -931,7 +931,7 @@ router.get('/games', async (req, res) => {
         if (!g.game_id) return false;
         if (!g.game_id.startsWith('af-') && !g.game_id.startsWith('ab-')) return false;
         if (g.status === 'live' || g.status === 'finished') return false;
-        const kickoff = new Date(g.time);
+        const kickoff = new Date(g.scheduled_time || g.time);
         return !isNaN(kickoff.getTime()) && kickoff <= now;
       })
       .map(g => g.id);
