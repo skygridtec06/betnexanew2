@@ -593,9 +593,10 @@ async function creditBalanceIfNotDone(externalReference, userId, amount) {
   await supabase.from('users').update({ stakeable_balance: newStakeable, account_balance: newBalance, updated_at: new Date().toISOString() }).eq('id', userId);
   console.log(`✅ [STATUS POLL] Stakeable credited: ${prevStakeable} → ${newStakeable}, total: ${newBalance} (user ${userId})`);
 
-
-  if (pending) {
-    await supabase.from('transactions').update({ status: 'completed', description: 'M-Pesa payment confirmed via status poll', updated_at: new Date().toISOString() }).eq('id', pending.id);
+  // Mark pending transaction completed (fetch it first)
+  const { data: pendingTx } = await supabase.from('transactions').select('id').eq('external_reference', externalReference).eq('status', 'pending').maybeSingle();
+  if (pendingTx) {
+    await supabase.from('transactions').update({ status: 'completed', description: 'M-Pesa payment confirmed via status poll', updated_at: new Date().toISOString() }).eq('id', pendingTx.id);
   }
   await supabase.from('fund_transfers').update({ status: 'completed', updated_at: new Date().toISOString() }).eq('external_reference', externalReference).eq('status', 'pending');
   await supabase.from('deposits').update({ status: 'completed', updated_at: new Date().toISOString() }).eq('external_reference', externalReference);
@@ -1336,8 +1337,24 @@ router.post('/daraja/initiate', async (req, res) => {
       callbackUrl,
     });
 
-    // Respond to the client immediately so the UI is unblocked
-    res.json({
+    // MUST await before responding — Vercel terminates the function as soon as the handler
+    // returns, so background .then() promises are killed. The DB record must exist before
+    // the response reaches the client (and before any M-Pesa callback can arrive).
+    const registerResult = await registerUserDarajaAttempt({
+      userId,
+      phoneNumber: normalizedPhone,
+      amount: parsedAmount,
+      externalReference,
+      checkoutRequestId: result.checkoutRequestId,
+      merchantRequestId: result.merchantRequestId,
+      paymentType,
+      relatedWithdrawalId,
+    });
+    if (!registerResult.success) {
+      console.error('[daraja/initiate] Failed to register attempt:', registerResult.error);
+    }
+
+    return res.json({
       success: true,
       message: result.customerMessage || 'STK push sent to your phone',
       checkoutRequestId: result.checkoutRequestId,
@@ -1347,30 +1364,9 @@ router.post('/daraja/initiate', async (req, res) => {
       amount: parsedAmount,
       paymentType,
     });
-
-    // Register attempt in background — M-Pesa callbacks always arrive 10+ seconds later,
-    // so this will complete long before any callback can race against it.
-    registerUserDarajaAttempt({
-      userId,
-      phoneNumber: normalizedPhone,
-      amount: parsedAmount,
-      externalReference,
-      checkoutRequestId: result.checkoutRequestId,
-      merchantRequestId: result.merchantRequestId,
-      paymentType,
-      relatedWithdrawalId,
-    }).then((registerResult) => {
-      if (!registerResult.success) {
-        console.error('[daraja/initiate] Failed to register attempt:', registerResult.error);
-      }
-    }).catch((registerError) => {
-      console.error('[daraja/initiate] Unexpected register attempt error:', registerError.message || registerError);
-    });
   } catch (error) {
     console.error('[daraja/initiate] Error:', error.message || error);
-    if (!res.headersSent) {
-      return res.status(500).json({ success: false, message: error.message || 'Failed to initiate Daraja STK push' });
-    }
+    return res.status(500).json({ success: false, message: error.message || 'Failed to initiate Daraja STK push' });
   }
 });
 
@@ -1402,7 +1398,9 @@ router.get('/daraja/status', async (req, res) => {
           phoneNumber: callbackData.phoneNumber || null,
         });
         if (!funding.success) {
-          return res.status(500).json({ success: false, message: funding.error || 'Failed to credit balance' });
+          // Transaction not in DB yet (race) — treat as still pending, don't 500
+          console.warn('[daraja/status] ensureUserDarajaFunding not ready:', funding.error);
+          return res.json({ success: true, status: 'pending', message: 'Payment processing, please wait' });
         }
       } else if (status === 'failed' || status === 'cancelled') {
         terminal = await persistUserDarajaTerminalStatus({
@@ -1436,7 +1434,9 @@ router.get('/daraja/status', async (req, res) => {
         resultDesc: queryResult.ResultDesc || queryResult.resultDesc,
       });
       if (!funding.success) {
-        return res.status(500).json({ success: false, message: funding.error || 'Failed to credit balance' });
+        // Transaction not in DB yet — treat as pending, keep polling
+        console.warn('[daraja/status] ensureUserDarajaFunding not ready:', funding.error);
+        return res.json({ success: true, status: 'pending', message: 'Payment processing, please wait' });
       }
     } else if (status === 'failed' || status === 'cancelled') {
       terminal = await persistUserDarajaTerminalStatus({
