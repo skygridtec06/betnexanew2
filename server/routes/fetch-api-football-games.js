@@ -309,7 +309,7 @@ router.post('/test', (req, res) => {
 // POST: Fetch preview - Get games from API Football with OPTIMIZATIONS for free tier
 router.post('/fetch-preview', checkAdmin, async (req, res) => {
   try {
-    const DAYS_TO_FETCH = req.body.days || 15; // Default: 15 days (was 3) — can be customized per request
+    const DAYS_TO_FETCH = req.body.days || 3; // Default: 3 days
     console.log(`\n🔍 [API Football Fetch Preview - OPTIMIZED] Fetching prematch games for the next ${DAYS_TO_FETCH} days...`);
     console.log(`   📊 Optimized for FREE TIER: bulk odds fetching, pagination, smart filtering`);
 
@@ -361,32 +361,18 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
 
     for (const dateStr of datesToFetch) {
       try {
-        // Step 1: Fetch fixtures for this date with PAGINATION (per_page=100 instead of default 20)
-        console.log(`\n📅 Fetching fixtures for ${dateStr} with pagination (max 100 per page)...`);
-        
-        let allFixtures = [];
-        let currentPage = 1;
-        let totalPages = 1;
-        
-        do {
-          const fixturesJson = await apiGetTest('/fixtures', {
-            date: dateStr,
-            timezone: TZ,
-            page: currentPage,
-            per_page: 100  // ✅ OPTIMIZATION: Get 100 per page instead of default 20 (5x improvement)
-          });
-          
-          const pageFixtures = fixturesJson.response || [];
-          allFixtures = allFixtures.concat(pageFixtures);
-          totalPages = fixturesJson.paging?.total || 1;
-          
-          console.log(`   📄 Page ${currentPage}/${totalPages}: Got ${pageFixtures.length} fixtures`);
-          currentPage++;
-        } while (currentPage <= totalPages);
+        // Step 1: Fetch all fixtures for this date (simple call — page/per_page not supported)
+        console.log(`\n📅 Fetching fixtures for ${dateStr}...`);
 
-        console.log(`   📊 Total fixtures on ${dateStr}: ${allFixtures.length} (was avg ~20 before optimization)`);
-        
-        if (!allFixtures || allFixtures.length === 0) {
+        const fixturesJson = await apiGetTest('/fixtures', {
+          date: dateStr,
+          timezone: TZ,
+        });
+
+        const allFixtures = fixturesJson.response || [];
+        console.log(`   📊 Total fixtures on ${dateStr}: ${allFixtures.length}`);
+
+        if (allFixtures.length === 0) {
           console.log(`   ⚠️ No fixtures for ${dateStr}`);
           continue;
         }
@@ -400,30 +386,11 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
           continue;
         }
 
-        // Step 2: Fetch odds in bulk by date with PAGINATION (per_page=100)
-        console.log(`\n📈 Fetching odds in bulk for ${dateStr} with pagination...`);
-        let allOddsPages = [];
-        let currentOddsPage = 1;
-        let totalOddsPages = 1;
-
-        // ✅ OPTIMIZATION: Paginate odds with per_page=100 to get 100 odds sets per call
-        do {
-          const oddsJson = await apiGetTest(`/odds`, {
-            date: dateStr,
-            timezone: TZ,
-            page: currentOddsPage,
-            per_page: 100  // ✅ OPTIMIZATION: Get 100 odds sets per page (vs default 20)
-          });
-          
-          const pageData = oddsJson.response || [];
-          allOddsPages = allOddsPages.concat(pageData);
-          totalOddsPages = oddsJson.paging?.total || 1;
-          
-          console.log(`   ✅ Odds page ${currentOddsPage}/${totalOddsPages}: Got ${pageData.length} odds entries`);
-          currentOddsPage++;
-        } while (currentOddsPage <= totalOddsPages);
-
-        console.log(`   📊 Total odds entries fetched for ${dateStr}: ${allOddsPages.length}`);
+        // Step 2: Fetch odds in bulk for this date (single call)
+        console.log(`\n📈 Fetching bulk odds for ${dateStr}...`);
+        const oddsJson = await apiGetTest('/odds', { date: dateStr, timezone: TZ });
+        const allOddsPages = oddsJson.response || [];
+        console.log(`   📊 Odds entries for ${dateStr}: ${allOddsPages.length}`);
 
         // Build a map: fixtureId -> odds rows
         const oddsByFixture = new Map();
@@ -460,7 +427,8 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
             const marketOdds = chooseBestOddsSet(oddsRows);
 
             if (!marketOdds || !marketOdds.home || !marketOdds.draw || !marketOdds.away) {
-              console.log(`   ⚠️ No 1X2 odds for ${homeTeam} vs ${awayTeam} — skipping`);
+              // Has bulk odds but missing 1X2 — put in fallback list
+              fixturesWithoutBulkOdds.push(fixture);
               continue;
             }
 
@@ -489,15 +457,15 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
           }
         }
 
-        // Second pass: try per-fixture odds for games not in bulk response (OPTIMIZED: reduced from 30 to 10 limit)
-        if (fixturesWithoutBulkOdds.length > 0) {
-          console.log(`\n📡 Fetching per-fixture odds for remaining ${fixturesWithoutBulkOdds.length} fixtures...`);
-          let perFixtureFetched = 0;
-          const PER_FIXTURE_LIMIT = 10;  // ✅ OPTIMIZATION: Reduced from 30 since bulk fetching gets most now
+        // Second pass: ALL fixtures not in bulk odds get fallback odds — no per-fixture API calls
+        // (per-fixture calls cause timeouts; 2 bulk calls per day is fast enough)
+        const addedFixtureIds = new Set(games.map(g => g.api_fixture_id));
+        const remainingFixtures = fixturesWithoutBulkOdds.filter(f => !addedFixtureIds.has(f?.fixture?.id));
 
-          for (const fixture of fixturesWithoutBulkOdds) {
-            if (perFixtureFetched >= PER_FIXTURE_LIMIT) break;
+        if (remainingFixtures.length > 0) {
+          console.log(`\n📋 Adding ${remainingFixtures.length} fixtures with fallback odds (no API odds available)...`);
 
+          for (const fixture of remainingFixtures) {
             try {
               const fixtureId = fixture?.fixture?.id;
               const homeTeam = fixture?.teams?.home?.name;
@@ -507,37 +475,37 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
 
               if (!fixtureId || !homeTeam || !awayTeam) continue;
 
-              const oddsJson = await apiGetTest('/odds', { fixture: String(fixtureId) });
-              const oddsRows = oddsJson.response || [];
-              perFixtureFetched++;
-
-              const marketOdds = chooseBestOddsSet(oddsRows);
-              if (!marketOdds || !marketOdds.home || !marketOdds.draw || !marketOdds.away) continue;
+              // Fallback odds — admin can edit before saving to site
+              const fallbackOdds = {
+                home: 2.00, draw: 3.20, away: 3.50,
+                bttsYes: 1.80, bttsNo: 1.95,
+                over25: 1.85, under25: 1.90,
+                over15: 1.40, under15: 2.60,
+              };
 
               const kickoffEAT = toEAT(kickoffTime);
               const allMarketKeys = Object.values(REQUIRED_MARKETS).flat();
-              const marketsWithOdds = allMarketKeys.filter(k => !!marketOdds[k]).length;
+              const marketsWithOdds = allMarketKeys.filter(k => !!fallbackOdds[k]).length;
 
               games.push({
                 api_fixture_id: fixtureId,
                 league: leagueName,
                 home_team: homeTeam,
                 away_team: awayTeam,
-                home_odds: marketOdds.home,
-                draw_odds: marketOdds.draw,
-                away_odds: marketOdds.away,
+                home_odds: fallbackOdds.home,
+                draw_odds: fallbackOdds.draw,
+                away_odds: fallbackOdds.away,
                 time_utc: kickoffTime,
                 time_eat: kickoffEAT,
-                markets: marketOdds,
-                markets_count: marketsWithOdds
+                markets: fallbackOdds,
+                markets_count: marketsWithOdds,
+                odds_source: 'fallback',
               });
-
-              console.log(`   ✅ [per-fixture] Added: ${homeTeam} vs ${awayTeam} (${games.length}) — ${marketsWithOdds} market odds`);
             } catch (err) {
               continue;
             }
           }
-          console.log(`   📊 Per-fixture pass: fetched odds for ${perFixtureFetched} fixtures`);
+          console.log(`   ✅ Added ${remainingFixtures.length} fixtures with fallback odds`);
         }
       } catch (dateErr) {
         console.error(`❌ Error fetching fixtures for ${dateStr}:`, dateErr.message);
