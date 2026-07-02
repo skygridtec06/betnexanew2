@@ -162,6 +162,41 @@ async function registerUserDarajaAttempt({
     if (error) console.warn('[registerUserDarajaAttempt] fund_transfers warning:', error.message);
   });
 
+  // deposits record — admin panel and history both read from this table
+  // fire-and-forget so it never blocks the STK push response
+  supabase.from('deposits').insert({
+    user_id: userId,
+    amount: depositAmount,
+    phone_number: phoneNumber,
+    status: 'pending',
+    method: methodLabel,
+    external_reference: externalReference,
+    checkout_request_id: checkoutRequestId,
+    description,
+    created_at: timestamp,
+    updated_at: timestamp,
+  }).then(({ error }) => {
+    if (error) console.warn('[registerUserDarajaAttempt] deposits warning:', error.message);
+  });
+
+  // activation_fees record — History page reads activation/priority fees from this table
+  if (paymentType === 'activation' || paymentType === 'priority') {
+    supabase.from('activation_fees').insert({
+      user_id: userId,
+      fee_type: paymentType,
+      amount: depositAmount,
+      phone_number: phoneNumber,
+      status: 'pending',
+      method: methodLabel,
+      external_reference: externalReference,
+      checkout_request_id: checkoutRequestId,
+      created_at: timestamp,
+      updated_at: timestamp,
+    }).then(({ error }) => {
+      if (error) console.warn('[registerUserDarajaAttempt] activation_fees warning:', error.message);
+    });
+  }
+
   // Cache for status polling lookup
   paymentCache.storePayment(externalReference, checkoutRequestId, {
     type: `USER_DARAJA_${paymentType.toUpperCase()}`,
@@ -332,6 +367,20 @@ async function ensureUserDarajaFunding({
     .eq('checkout_request_id', checkoutRequestId)
     .eq('status', 'pending')
     .then(({ error }) => { if (error) console.warn('[ensureUserDarajaFunding] fund_transfers update warning:', error.message); });
+
+  // Update deposits record to completed (fire & forget)
+  supabase.from('deposits')
+    .update({ status: 'completed', mpesa_receipt: mpesaReceipt || null, updated_at: timestamp })
+    .eq('checkout_request_id', checkoutRequestId)
+    .then(({ error }) => { if (error) console.warn('[ensureUserDarajaFunding] deposits update warning:', error.message); });
+
+  // Update activation_fees record to completed for activation/priority (fire & forget)
+  if (paymentType === 'activation' || paymentType === 'priority') {
+    supabase.from('activation_fees')
+      .update({ status: 'completed', updated_at: timestamp })
+      .eq('checkout_request_id', checkoutRequestId)
+      .then(({ error }) => { if (error) console.warn('[ensureUserDarajaFunding] activation_fees update warning:', error.message); });
+  }
 
   // Log to balance_history (fire & forget)
   supabase.from('balance_history').insert({
