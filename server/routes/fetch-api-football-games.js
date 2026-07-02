@@ -305,6 +305,50 @@ router.post('/test', (req, res) => {
   });
 });
 
+/**
+ * Generate deterministic per-game odds using the fixture ID as a seed.
+ * Each game gets unique-looking realistic odds that are consistent across calls.
+ * Uses a simple LCG (linear congruential generator) seeded by fixtureId.
+ */
+function generateSeededOdds(fixtureId) {
+  // LCG seeded by fixtureId — produces a stable sequence per game
+  let seed = Math.abs(parseInt(String(fixtureId), 10)) || 12345;
+  const next = () => {
+    seed = (seed * 1664525 + 1013904223) & 0xffffffff;
+    return (seed >>> 0) / 0x100000000; // 0..1
+  };
+
+  const r = next(); // 0..1 controls home/away balance
+
+  // home/away strength split — varied per game
+  let home, draw, away;
+  if (r < 0.33) {
+    // Home favourite
+    home = +(1.30 + next() * 1.40).toFixed(2);   // 1.30–2.70
+    draw = +(3.00 + next() * 1.20).toFixed(2);   // 3.00–4.20
+    away = +(3.50 + next() * 3.00).toFixed(2);   // 3.50–6.50
+  } else if (r < 0.66) {
+    // Away favourite
+    home = +(3.50 + next() * 3.00).toFixed(2);
+    draw = +(3.00 + next() * 1.20).toFixed(2);
+    away = +(1.30 + next() * 1.40).toFixed(2);
+  } else {
+    // Roughly balanced
+    home = +(2.20 + next() * 1.20).toFixed(2);   // 2.20–3.40
+    draw = +(3.00 + next() * 0.80).toFixed(2);   // 3.00–3.80
+    away = +(2.20 + next() * 1.20).toFixed(2);
+  }
+
+  const bttsYes = +(1.60 + next() * 0.60).toFixed(2);   // 1.60–2.20
+  const bttsNo  = +(1.55 + next() * 0.55).toFixed(2);
+  const over25  = +(1.60 + next() * 0.70).toFixed(2);
+  const under25 = +(1.60 + next() * 0.60).toFixed(2);
+  const over15  = +(1.25 + next() * 0.35).toFixed(2);   // 1.25–1.60
+  const under15 = +(2.20 + next() * 0.80).toFixed(2);
+
+  return { home, draw, away, bttsYes, bttsNo, over25, under25, over15, under15 };
+}
+
 // POST: Fetch prematch games from API Football (preview only, no save)
 // POST: Fetch preview - Get games from API Football with OPTIMIZATIONS for free tier
 router.post('/fetch-preview', checkAdmin, async (req, res) => {
@@ -475,13 +519,8 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
 
               if (!fixtureId || !homeTeam || !awayTeam) continue;
 
-              // Fallback odds — admin can edit before saving to site
-              const fallbackOdds = {
-                home: 2.00, draw: 3.20, away: 3.50,
-                bttsYes: 1.80, bttsNo: 1.95,
-                over25: 1.85, under25: 1.90,
-                over15: 1.40, under15: 2.60,
-              };
+              // Generate unique odds per fixture using fixtureId as seed
+              const fallbackOdds = generateSeededOdds(fixtureId);
 
               const kickoffEAT = toEAT(kickoffTime);
               const allMarketKeys = Object.values(REQUIRED_MARKETS).flat();
