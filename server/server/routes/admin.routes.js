@@ -5857,7 +5857,7 @@ router.post('/bets/:betId/send-sms', checkAdmin, async (req, res) => {
     const balanceText = updatedBalance !== null
       ? (Number.isInteger(Number(updatedBalance)) ? String(Number(updatedBalance)) : Number(updatedBalance).toFixed(2))
       : '0';
-    const smsMessage = `Congratulations ${username}! You WON KSH${payoutText} on BETNEXA from your bet ID:${betRef}. Your new balance is KSH${balanceText}, Login at https://betnexa.vercel.app to view your account`;
+    const smsMessage = `Congratulations ${username}! You WON KSH${payoutText} on BETNEXA from your bet ID:${betRef}. Your new balance is KSH${balanceText}, Login at https://betnexa.co.ke to view your account`;
 
     let sent = false;
     if (phoneNumber) {
