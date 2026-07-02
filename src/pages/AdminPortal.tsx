@@ -3977,13 +3977,26 @@ const AdminPortal = () => {
 
           <TabsContent value="transactions" className="space-y-6">
             <Card className="border-border bg-card p-4">
-              <label className="text-xs font-medium text-muted-foreground">Search Transactions</label>
-              <Input
-                value={transactionSearchQuery}
-                onChange={(e) => setTransactionSearchQuery(e.target.value)}
-                placeholder="Search by username or phone number"
-                className="mt-2"
-              />
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <label className="text-xs font-medium text-muted-foreground">Search Transactions</label>
+                  <Input
+                    value={transactionSearchQuery}
+                    onChange={(e) => setTransactionSearchQuery(e.target.value)}
+                    placeholder="Search by username or phone number"
+                    className="mt-2"
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-6 shrink-0"
+                  onClick={fetchAllTransactions}
+                  disabled={loadingPayments}
+                >
+                  {loadingPayments ? '...' : '↻ Refresh'}
+                </Button>
+              </div>
             </Card>
 
             {/* --- DEPOSITS SECTION --- */}

@@ -10,7 +10,7 @@ import { useTransactions } from "@/context/TransactionContext";
 import { useUser } from "@/context/UserContext";
 import { useNavigate } from "react-router-dom";
 import { formatTransactionDateInEAT } from "@/lib/timezoneFormatter";
-import { useEffect } from "react";
+import { useEffect, useCallback, useRef } from "react";
 
 interface HistoryEntry {
   id: string;
@@ -24,16 +24,31 @@ interface HistoryEntry {
 
 export default function History() {
   const { bets } = useBets();
-  const { getUserTransactions, getUserActivationFees, fetchTransactions } = useTransactions();
+  const { getUserTransactions, getUserActivationFees, fetchTransactions, isLoading } = useTransactions();
   const { user } = useUser();
   const navigate = useNavigate();
+  const lastFetchRef = useRef<number>(0);
 
-  // Fetch transactions + activation fees on mount
+  const refresh = useCallback(() => {
+    if (!user?.id) return;
+    const now = Date.now();
+    // Debounce: don't re-fetch if we fetched less than 5 seconds ago
+    if (now - lastFetchRef.current < 5000) return;
+    lastFetchRef.current = now;
+    fetchTransactions(user.id);
+  }, [user?.id, fetchTransactions]);
+
+  // Fetch on mount and whenever user.id becomes available
   useEffect(() => {
-    if (user?.id) {
-      fetchTransactions(user.id);
-    }
-  }, [user?.id]);
+    refresh();
+  }, [refresh]);
+
+  // Re-fetch when the tab becomes visible again (user switches back)
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [refresh]);
   
   // Get user's transactions
   const userTransactions = getUserTransactions(user?.id || "user1");
