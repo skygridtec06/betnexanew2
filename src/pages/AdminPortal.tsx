@@ -2675,6 +2675,48 @@ const AdminPortal = () => {
             )}
 
             <div className="space-y-3">
+              {/* ── Select-all / bulk-delete toolbar (upcoming + live games only) ── */}
+              {(() => {
+                const selectableGames = sortGamesByKickoffTime(games).filter(g => g.status === 'upcoming' || g.status === 'live');
+                const allSelected = selectableGames.length > 0 && selectableGames.every(g => markedGames.has(g.id));
+                const someSelected = markedGames.size > 0;
+                if (selectableGames.length === 0) return null;
+                return (
+                  <div className="flex items-center gap-3 rounded-lg border border-border/50 bg-card/60 px-3 py-2">
+                    <input
+                      type="checkbox"
+                      id="select-all-upcoming"
+                      className="h-4 w-4 cursor-pointer accent-primary"
+                      checked={allSelected}
+                      onChange={() => {
+                        if (allSelected) {
+                          const next = new Set(markedGames);
+                          selectableGames.forEach(g => next.delete(g.id));
+                          setMarkedGames(next);
+                        } else {
+                          setMarkedGames(new Set([...markedGames, ...selectableGames.map(g => g.id)]));
+                        }
+                      }}
+                    />
+                    <label htmlFor="select-all-upcoming" className="cursor-pointer text-xs text-muted-foreground select-none">
+                      {allSelected ? 'Deselect all' : `Select all upcoming (${selectableGames.length})`}
+                    </label>
+                    {someSelected && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="ml-auto h-7 text-xs"
+                        onClick={deleteMarkedGames}
+                        disabled={deletingMarkedGames}
+                      >
+                        <Trash2 className="mr-1 h-3 w-3" />
+                        {deletingMarkedGames ? 'Deleting…' : `Delete ${markedGames.size} selected`}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })()}
+
               {sortGamesByKickoffTime(games).map((game) => (
                 <div key={game.id} className="rounded-xl border border-border/50 bg-card p-4">
                   {isApiManagedGame(game.id) && (
@@ -2683,6 +2725,20 @@ const AdminPortal = () => {
                     </div>
                   )}
                   <div className="flex items-center justify-between">
+                    {/* Checkbox — only for upcoming/live games */}
+                    {(game.status === 'upcoming' || game.status === 'live') && (
+                      <input
+                        type="checkbox"
+                        className="mr-3 h-4 w-4 flex-shrink-0 cursor-pointer accent-primary"
+                        checked={markedGames.has(game.id)}
+                        onChange={() => {
+                          const next = new Set(markedGames);
+                          next.has(game.id) ? next.delete(game.id) : next.add(game.id);
+                          setMarkedGames(next);
+                        }}
+                      />
+                    )}
+                    {game.status === 'finished' && <div className="mr-3 w-4 flex-shrink-0" />}
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground">{game.league}</span>
