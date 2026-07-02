@@ -85,6 +85,15 @@ async function registerUserDarajaAttempt({
     return { success: true, transaction: existing };
   }
 
+  // Fetch current balance — required because balance_before is NOT NULL in the transactions table
+  const { data: userRow } = await supabase
+    .from('users')
+    .select('account_balance')
+    .eq('id', userId)
+    .maybeSingle();
+
+  const currentBalance = parseFloat(userRow?.account_balance) || 0;
+
   const methodLabel =
     paymentType === 'activation' ? 'Withdrawal Activation (Daraja)'
     : paymentType === 'priority'   ? 'Priority Fee (Daraja)'
@@ -106,6 +115,8 @@ async function registerUserDarajaAttempt({
     external_reference: externalReference,
     checkout_request_id: checkoutRequestId,
     description,
+    balance_before: currentBalance,
+    balance_after: currentBalance + depositAmount,
     created_at: timestamp,
     updated_at: timestamp,
   };
