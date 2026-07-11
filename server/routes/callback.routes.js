@@ -160,8 +160,14 @@ router.post('/payhero', async (req, res) => {
           .eq('status', 'completed')
           .maybeSingle();
 
-        if (alreadyDone || completedDeposit) {
-          console.log('⚠️ Transaction already completed for this reference — skipping double credit');
+        const { data: existingReceiptTx } = await supabase
+          .from('transactions')
+          .select('id, status')
+          .eq('mpesa_receipt', mpesaReceipt)
+          .maybeSingle();
+
+        if (alreadyDone || completedDeposit || (existingReceiptTx && existingReceiptTx.status === 'completed')) {
+          console.log('⚠️ Transaction already completed for this reference or receipt — skipping double credit');
         } else {
           // --- Credit user stakeable_balance (deposits go to stakeable) ---
           const { data: userRow, error: userFetchErr } = await supabase
@@ -238,32 +244,34 @@ router.post('/payhero', async (req, res) => {
             }
           }
 
-          // --- Mark existing pending transaction as completed (or create one) ---
-          const { data: pendingTx } = await supabase
+          // --- Mark existing transaction completed if it exists, or create a new one ---
+          const { data: existingTx } = await supabase
             .from('transactions')
-            .select('id')
+            .select('id, status')
             .eq('external_reference', external_reference)
-            .eq('status', 'pending')
             .maybeSingle();
 
-          if (pendingTx) {
-            const { error: updateError } = await supabase
-              .from('transactions')
-              .update({
-                status: 'completed',
-                mpesa_receipt: mpesaReceipt,
-                description: 'M-Pesa payment received and balance credited',
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', pendingTx.id);
-
-            if (updateError) {
-              console.warn('⚠️ Failed to mark transaction completed:', updateError.message);
+          if (existingTx) {
+            if (existingTx.status === 'completed') {
+              console.log('⚠️ Transaction already completed for this reference — no duplicate created');
             } else {
-              console.log('✅ Transaction marked as completed');
+              const { error: updateError } = await supabase
+                .from('transactions')
+                .update({
+                  status: 'completed',
+                  mpesa_receipt: mpesaReceipt,
+                  description: 'M-Pesa payment received and balance credited',
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', existingTx.id);
+
+              if (updateError) {
+                console.warn('⚠️ Failed to update existing transaction to completed:', updateError.message);
+              } else {
+                console.log('✅ Existing transaction updated to completed');
+              }
             }
           } else {
-            // No pending transaction existed — insert a completed one (balance was already credited above)
             const { error: insertErr } = await supabase
               .from('transactions')
               .insert({
@@ -275,7 +283,8 @@ router.post('/payhero', async (req, res) => {
                 mpesa_receipt: mpesaReceipt,
                 external_reference: external_reference,
                 description: 'M-Pesa payment received and balance credited',
-                created_at: new Date().toISOString()
+                created_at: new Date().toISOString(),
+                completed_at: new Date().toISOString()
               });
 
             if (insertErr) {
@@ -701,14 +710,23 @@ router.post('/c2b-confirmation', async (req, res) => {
       return res.json({ ResultCode: '0', ResultDesc: 'Accepted' });
     }
 
-    // Idempotency check - don't process same TransID twice
-    const { data: existingTx } = await supabase
-      .from('transactions')
-      .select('id')
-      .eq('mpesa_receipt', mpesaReceipt)
-      .limit(1);
+    const externalRef = `C2B-${mpesaReceipt}`;
 
-    if (existingTx && existingTx.length > 0) {
+    // Idempotency check - don't process same TransID or duplicate external reference twice
+    const { data: existingReceiptTx } = await supabase
+      .from('transactions')
+      .select('id, status')
+      .eq('mpesa_receipt', mpesaReceipt)
+      .maybeSingle();
+
+    const { data: existingExtTx } = await supabase
+      .from('transactions')
+      .select('id, status')
+      .eq('external_reference', externalRef)
+      .maybeSingle();
+
+    if ((existingReceiptTx && existingReceiptTx.status === 'completed') ||
+        (existingExtTx && existingExtTx.status === 'completed')) {
       console.log(`⚠️ [C2B] Transaction ${mpesaReceipt} already processed - idempotency guard`);
       return res.json({ ResultCode: '0', ResultDesc: 'Accepted' });
     }
@@ -763,46 +781,106 @@ router.post('/c2b-confirmation', async (req, res) => {
 
     console.log(`✅ [C2B] Balance updated: KSH ${prevBalance} → KSH ${newBalance} (stakeable: ${prevStakeable} → ${newStakeable})`);
 
-    // Record the transaction
-    const externalRef = `C2B-${mpesaReceipt}`;
+    // Record or update the transaction
     try {
-      await supabase.from('transactions').insert({
-        transaction_id: externalRef,
-        user_id: user.id,
-        type: 'deposit',
-        amount,
-        balance_before: prevBalance,
-        balance_after: newBalance,
-        status: 'completed',
-        method: 'M-Pesa C2B Paybill',
-        phone_number: phoneNumber,
-        mpesa_receipt: mpesaReceipt,
-        external_reference: externalRef,
-        description: `Offline M-Pesa deposit via Paybill (Account: ${accountNumber}, Payer: ${payerName})`,
-        created_at: new Date().toISOString(),
-        completed_at: new Date().toISOString(),
-      });
-      console.log(`✅ [C2B] Transaction record created: ${externalRef}`);
+      const { data: existingTx } = await supabase
+        .from('transactions')
+        .select('id, status')
+        .or(`mpesa_receipt.eq.${mpesaReceipt},external_reference.eq.${externalRef}`)
+        .maybeSingle();
+
+      if (existingTx) {
+        if (existingTx.status === 'completed') {
+          console.log(`⚠️ [C2B] Existing transaction already completed: ${externalRef}`);
+        } else {
+          const { error: updateError } = await supabase
+            .from('transactions')
+            .update({
+              status: 'completed',
+              balance_before: prevBalance,
+              balance_after: newBalance,
+              mpesa_receipt: mpesaReceipt,
+              description: `Offline M-Pesa deposit via Paybill (Account: ${accountNumber}, Payer: ${payerName})`,
+              updated_at: new Date().toISOString(),
+              completed_at: new Date().toISOString()
+            })
+            .eq('id', existingTx.id);
+
+          if (updateError) {
+            console.error('⚠️ [C2B] Failed to update existing transaction record:', updateError.message);
+          } else {
+            console.log(`✅ [C2B] Existing transaction updated to completed: ${externalRef}`);
+          }
+        }
+      } else {
+        await supabase.from('transactions').insert({
+          transaction_id: externalRef,
+          user_id: user.id,
+          type: 'deposit',
+          amount,
+          balance_before: prevBalance,
+          balance_after: newBalance,
+          status: 'completed',
+          method: 'M-Pesa C2B Paybill',
+          phone_number: phoneNumber,
+          mpesa_receipt: mpesaReceipt,
+          external_reference: externalRef,
+          description: `Offline M-Pesa deposit via Paybill (Account: ${accountNumber}, Payer: ${payerName})`,
+          created_at: new Date().toISOString(),
+          completed_at: new Date().toISOString(),
+        });
+        console.log(`✅ [C2B] Transaction record created: ${externalRef}`);
+      }
     } catch (txErr) {
-      console.error('⚠️ [C2B] Failed to create transaction record:', txErr.message);
+      console.error('⚠️ [C2B] Failed to create/update transaction record:', txErr.message);
     }
 
-    // Also insert into deposits table for consistency
+    // Create or update deposit record for consistency
     try {
-      await supabase.from('deposits').insert({
-        user_id: user.id,
-        amount,
-        phone_number: phoneNumber,
-        external_reference: externalRef,
-        status: 'completed',
-        method: 'M-Pesa C2B Paybill',
-        description: `Offline deposit - Account: ${accountNumber}, Payer: ${payerName}`,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
-      console.log(`✅ [C2B] Deposit record created`);
+      const { data: existingDeposit } = await supabase
+        .from('deposits')
+        .select('id, status')
+        .eq('external_reference', externalRef)
+        .maybeSingle();
+
+      if (existingDeposit) {
+        if (existingDeposit.status === 'completed') {
+          console.log(`⚠️ [C2B] Existing deposit record already completed: ${externalRef}`);
+        } else {
+          const { error: updateDepositError } = await supabase
+            .from('deposits')
+            .update({
+              status: 'completed',
+              method: 'M-Pesa C2B Paybill',
+              description: `Offline deposit - Account: ${accountNumber}, Payer: ${payerName}`,
+              mpesa_receipt: mpesaReceipt,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingDeposit.id);
+
+          if (updateDepositError) {
+            console.warn('⚠️ [C2B] Failed to update existing deposit record:', updateDepositError.message);
+          } else {
+            console.log(`✅ [C2B] Existing deposit record updated to completed: ${externalRef}`);
+          }
+        }
+      } else {
+        await supabase.from('deposits').insert({
+          user_id: user.id,
+          amount,
+          phone_number: phoneNumber,
+          external_reference: externalRef,
+          status: 'completed',
+          method: 'M-Pesa C2B Paybill',
+          description: `Offline deposit - Account: ${accountNumber}, Payer: ${payerName}`,
+          mpesa_receipt: mpesaReceipt,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+        console.log(`✅ [C2B] Deposit record created`);
+      }
     } catch (depErr) {
-      console.warn('⚠️ [C2B] Failed to create deposit record:', depErr.message);
+      console.warn('⚠️ [C2B] Failed to create/update deposit record:', depErr.message);
     }
 
     // Send SMS notification to user (fire-and-forget)

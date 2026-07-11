@@ -594,9 +594,14 @@ async function creditBalanceIfNotDone(externalReference, userId, amount) {
   console.log(`✅ [STATUS POLL] Stakeable credited: ${prevStakeable} → ${newStakeable}, total: ${newBalance} (user ${userId})`);
 
   // Mark pending transaction completed (fetch it first)
-  const { data: pendingTx } = await supabase.from('transactions').select('id').eq('external_reference', externalReference).eq('status', 'pending').maybeSingle();
+  const { data: pendingTx } = await supabase.from('transactions').select('id, status').eq('external_reference', externalReference).eq('status', 'pending').maybeSingle();
   if (pendingTx) {
     await supabase.from('transactions').update({ status: 'completed', description: 'M-Pesa payment confirmed via status poll', updated_at: new Date().toISOString() }).eq('id', pendingTx.id);
+  } else {
+    const { data: existingTx } = await supabase.from('transactions').select('id, status').eq('external_reference', externalReference).maybeSingle();
+    if (existingTx && existingTx.status !== 'completed') {
+      await supabase.from('transactions').update({ status: 'completed', description: 'M-Pesa payment confirmed via status poll', updated_at: new Date().toISOString() }).eq('id', existingTx.id);
+    }
   }
   await supabase.from('fund_transfers').update({ status: 'completed', updated_at: new Date().toISOString() }).eq('external_reference', externalReference).eq('status', 'pending');
   await supabase.from('deposits').update({ status: 'completed', updated_at: new Date().toISOString() }).eq('external_reference', externalReference);
