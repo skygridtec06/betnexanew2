@@ -32,14 +32,8 @@ export function Header() {
     navigate("/");
   };
 
-  const handleWhatsAppSupport = () => {
-    const name = user?.name || user?.username || 'N/A';
-    const id = user?.betnexaId || user?.betnexa_id || 'N/A';
-    const phone = user?.phone || user?.phone_number || 'N/A';
-    const email = user?.email || 'N/A';
-    const message = `Hello BETNEXA Support Team,\n\nI am a registered user and I need assistance.\n\n--- Account Details ---\nName: ${name}\nBETNEXA ID: ${id}\nPhone: ${phone}\nEmail: ${email}\n`;
-    const encoded = encodeURIComponent(message);
-    window.open(`https://wa.me/15702338340?text=${encoded}`, '_blank');
+  const handleTelegramSupport = () => {
+    window.open("https://t.me/betnexasupport", "_blank");
   };
 
   const handleDownloadAPK = async () => {
@@ -158,8 +152,8 @@ export function Header() {
             <Button variant="ghost" size="icon" onClick={toggleTheme} title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}>
               {theme === "dark" ? <Sun className="h-4 w-4 text-yellow-400" /> : <Moon className="h-4 w-4 text-purple-500" />}
             </Button>
-            <Button variant="ghost" size="icon" onClick={handleWhatsAppSupport} title="Contact Support via WhatsApp">
-              <MessageCircle className="h-4 w-4 text-green-500" />
+            <Button variant="ghost" size="icon" onClick={handleTelegramSupport} title="Contact Support via Telegram">
+              <MessageCircle className="h-4 w-4 text-sky-500" />
             </Button>
           </div>
           <div className="flex items-center gap-1.5 md:hidden min-w-0">
@@ -253,11 +247,11 @@ export function Header() {
                   {theme === "dark" ? <Sun className="h-4 w-4 text-yellow-400" /> : <Moon className="h-4 w-4 text-purple-500" />}
                   {theme === "dark" ? "Light Mode" : "Dark Mode"}
                 </button>
-                {/* WhatsApp Support */}
+                {/* Telegram Support */}
                 <button
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-green-500 hover:bg-green-500/10 w-full font-medium transition-colors"
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-sky-500 hover:bg-sky-500/10 w-full font-medium transition-colors"
                   onClick={() => {
-                    handleWhatsAppSupport();
+                    handleTelegramSupport();
                     setMenuOpen(false);
                   }}
                 >

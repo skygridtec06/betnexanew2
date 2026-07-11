@@ -215,18 +215,10 @@ export default function Login() {
                 Your account has been banned. Please contact support for assistance.
               </p>
               <a
-                href={`https://wa.me/15402602461?text=${encodeURIComponent(
-                  `Dear BetNexa Support,\n\nI am writing to request assistance regarding my banned account.\n\n` +
-                  `Account Details:\n` +
-                  `• Username: ${bannedUserInfo?.username || 'N/A'}\n` +
-                  `• Phone: ${bannedUserInfo?.phone || formData.phone || 'N/A'}\n` +
-                  `• Email: ${bannedUserInfo?.email || 'N/A'}\n` +
-                  `• User ID: ${bannedUserInfo?.betnexaId || 'N/A'}\n\n` +
-                  `I kindly request a review of my account status.\n\nThank you.`
-                )}`}
+                href="https://t.me/betnexasupport"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-green-700 transition-colors"
+                className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-sky-700 transition-colors"
               >
                 💬 Contact Support
               </a>
