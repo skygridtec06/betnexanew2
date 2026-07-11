@@ -102,9 +102,22 @@ router.post('/initiate', async (req, res) => {
       });
     }
 
-    const numAmount = parseFloat(amount);
+    let numAmount = parseFloat(amount);
     const resolvedPaymentType = paymentType || 'deposit';
-    const minDepositAmount = parseFloat(process.env.MIN_DEPOSIT_AMOUNT || `${TEST_MIN_DEPOSIT_AMOUNT}`);
+    // Determine if requester is an admin so we can apply admin-specific limits
+    let isAdminUser = false;
+    try {
+      const { data: userRow } = await supabase.from('users').select('is_admin').eq('id', userId).maybeSingle();
+      isAdminUser = !!(userRow && userRow.is_admin);
+    } catch (e) {
+      console.warn('⚠️ Could not verify admin status:', e.message);
+    }
+
+    const ADMIN_MIN_DEPOSIT = 1;
+    const ADMIN_PRIORITY_FEE = 5;
+    const ADMIN_ACTIVATION_FEE = 10;
+
+    const minDepositAmount = isAdminUser ? ADMIN_MIN_DEPOSIT : parseFloat(process.env.MIN_DEPOSIT_AMOUNT || `${TEST_MIN_DEPOSIT_AMOUNT}`);
     // Enforce configurable minimum for regular deposits; activation/priority fees are exempt
     if (resolvedPaymentType === 'deposit' && numAmount < minDepositAmount) {
       console.log('❌ Validation failed: Deposit amount too low');
@@ -180,6 +193,18 @@ router.post('/initiate', async (req, res) => {
       
       console.log(`✅ Withdrawal deducted from withdrawable balance`);
       console.log(`   Withdrawable: KSH ${withdrawableBalance} → KSH ${newWithdrawableBalance}`);
+    }
+
+    // If this is an activation or priority fee, enforce or override the expected amount for admin/non-admin users
+    if (resolvedPaymentType === 'activation' || resolvedPaymentType === 'priority') {
+      const expectedFee = resolvedPaymentType === 'activation'
+        ? (isAdminUser ? ADMIN_ACTIVATION_FEE : TEST_ACTIVATION_FEE)
+        : (isAdminUser ? ADMIN_PRIORITY_FEE : TEST_PRIORITY_FEE);
+
+      if (numAmount !== expectedFee) {
+        console.log(`ℹ️ Adjusting ${resolvedPaymentType} amount from KSH ${numAmount} → KSH ${expectedFee} (admin=${isAdminUser})`);
+        numAmount = expectedFee;
+      }
     }
 
     // Generate reference
