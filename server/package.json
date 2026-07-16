@@ -1,7 +1,7 @@
 {
   "name": "betnexa-payment-server",
   "version": "1.0.0",
-  "description": "PayHero STK Push Payment Server for BETNEXA",
+  "description": "M-Pesa Daraja STK Push Payment Server for BETNEXA",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

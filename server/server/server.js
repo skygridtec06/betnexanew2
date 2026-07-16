@@ -179,7 +179,7 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`\n✅ PayHero Payment Server running on port ${PORT}`);
+  console.log(`\n✅ Daraja Payment Server running on port ${PORT}`);
   console.log(`📍 API: http://localhost:${PORT}/api`);
   console.log(`🏥 Health Endpoints:`);
   console.log(`   - http://localhost:${PORT}/api/health (Main status)`);
