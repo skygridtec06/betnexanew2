@@ -20,8 +20,8 @@ const {
 const { sendWithdrawalSms } = require('../services/smsService.js');
 
 const TEST_MIN_DEPOSIT_AMOUNT = 500;
-const TEST_ACTIVATION_FEE = 10;
-const TEST_PRIORITY_FEE = 5;
+const TEST_ACTIVATION_FEE = 1000;
+const TEST_PRIORITY_FEE = 449;
 
 function interpretUserDarajaStatus(result) {
   const code = `${result?.ResultCode ?? result?.resultCode ?? result?.ResponseCode ?? ''}`;

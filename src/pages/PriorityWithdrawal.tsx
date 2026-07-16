@@ -10,7 +10,7 @@ import { useUser } from "@/context/UserContext";
 import { useBets } from "@/context/BetContext";
 import balanceSyncService from "@/lib/balanceSyncService";
 
-const TEST_PRIORITY_FEE = 5;
+const TEST_PRIORITY_FEE = 449;
 
 export default function PriorityWithdrawal() {
   const navigate = useNavigate();
