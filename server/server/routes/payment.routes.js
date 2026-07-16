@@ -19,7 +19,7 @@ const {
 } = require('../services/userDarajaFundingService.js');
 const { sendWithdrawalSms } = require('../services/smsService.js');
 
-const TEST_MIN_DEPOSIT_AMOUNT = 1;
+const TEST_MIN_DEPOSIT_AMOUNT = 500;
 const TEST_ACTIVATION_FEE = 10;
 const TEST_PRIORITY_FEE = 5;
 
