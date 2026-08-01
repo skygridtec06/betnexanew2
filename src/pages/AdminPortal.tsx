@@ -174,6 +174,10 @@ const AdminPortal = () => {
   } | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editingUserData, setEditingUserData] = useState<Record<string, any>>({});
+  const [showUserTransactionsDialog, setShowUserTransactionsDialog] = useState(false);
+  const [selectedTransactionUser, setSelectedTransactionUser] = useState<any>(null);
+  const [transactionActionInProgress, setTransactionActionInProgress] = useState<string | null>(null);
+  const [userTransactionsLoading, setUserTransactionsLoading] = useState(false);
   const [newGame, setNewGame] = useState<{
     league: string;
     homeTeam: string;
@@ -387,8 +391,9 @@ const AdminPortal = () => {
   }, [fetchAllBets]);
 
   // Fetch transactions for a specific user
-  const fetchUserTransactions = async (userId: string) => {
+  const fetchUserTransactions = async (userId: string, user?: any) => {
     try {
+      setUserTransactionsLoading(true);
       const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
       const response = await fetch(`${apiUrl}/api/admin/transactions/user/${userId}`, {
         headers: { 'Content-Type': 'application/json' }
@@ -397,9 +402,38 @@ const AdminPortal = () => {
       const data = await response.json();
       if (data.success) {
         setSelectedUserTransactions(data);
+        setSelectedTransactionUser(user || null);
+        setShowUserTransactionsDialog(true);
+      } else {
+        alert(`Error fetching transactions: ${data.error || data.message || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error fetching transactions:', error);
+      alert('Failed to fetch transactions.');
+    } finally {
+      setUserTransactionsLoading(false);
+    }
+  };
+
+  const handleTransactionStatusChange = async (transactionId: string, status: string) => {
+    try {
+      setTransactionActionInProgress(transactionId);
+      await updateTransactionStatus(transactionId, status as any, loggedInUser?.phone);
+      setSelectedUserTransactions((prev: any) => {
+        if (!prev || !Array.isArray(prev.transactions)) return prev;
+        return {
+          ...prev,
+          transactions: prev.transactions.map((tx: any) =>
+            tx.id === transactionId ? { ...tx, status } : tx
+          )
+        };
+      });
+      setAllTransactions((prev: any[]) => prev.map((tx: any) => tx.id === transactionId ? { ...tx, status } : tx));
+    } catch (error) {
+      console.error('Failed to update transaction status:', error);
+      alert('Failed to update transaction status.');
+    } finally {
+      setTransactionActionInProgress(null);
     }
   };
 
@@ -3763,6 +3797,14 @@ const AdminPortal = () => {
                             >
                               <Edit2 className="mr-1 h-3 w-3" /> Edit User
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={userTransactionsLoading && selectedTransactionUser?.id === user.id}
+                              onClick={() => fetchUserTransactions(user.id, user)}
+                            >
+                              <DollarSign className="mr-1 h-3 w-3" /> View Transactions
+                            </Button>
                             {!user.withdrawalActivated ? (
                               <Button
                                 size="sm"
@@ -4682,6 +4724,89 @@ const AdminPortal = () => {
 
         </Tabs>
 
+        <Dialog open={showUserTransactionsDialog} onOpenChange={(open) => {
+          if (!open) {
+            setShowUserTransactionsDialog(false);
+            setSelectedUserTransactions(null);
+            setSelectedTransactionUser(null);
+          }
+        }}>
+          <DialogContent className="sm:max-w-5xl">
+            <DialogHeader>
+              <DialogTitle>{selectedTransactionUser ? `Transactions for ${selectedTransactionUser.name}` : 'User Transactions'}</DialogTitle>
+              <DialogDescription>
+                Showing all deposits and withdrawals for this user. Use Approve, Reject or Revert to update transaction status.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4 space-y-4">
+              {selectedUserTransactions?.user && (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div><strong>Name:</strong> {selectedTransactionUser?.name || selectedUserTransactions.user?.username || 'N/A'}</div>
+                  <div><strong>Phone:</strong> {selectedUserTransactions.user?.phone_number || selectedTransactionUser?.phone || 'N/A'}</div>
+                  <div><strong>User ID:</strong> {selectedUserTransactions.user?.id || selectedTransactionUser?.id || 'N/A'}</div>
+                  <div><strong>Balance:</strong> KSH {selectedUserTransactions.user?.account_balance?.toLocaleString() ?? '0'}</div>
+                </div>
+              )}
+
+              <div className="rounded-md border border-border bg-card p-4">
+                {userTransactionsLoading ? (
+                  <div className="text-center text-sm text-muted-foreground">Loading transactions...</div>
+                ) : !selectedUserTransactions?.transactions || selectedUserTransactions.transactions.length === 0 ? (
+                  <div className="text-center text-sm text-muted-foreground">No transactions found for this user.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {selectedUserTransactions.transactions.map((transaction: any) => {
+                      const status = `${transaction.status || ''}`.toLowerCase();
+                      const isPending = status === 'pending';
+                      const isCompleted = status === 'completed';
+                      const isFailed = status === 'failed' || status === 'cancelled';
+                      return (
+                        <Card key={transaction.id} className="border-border bg-background p-4">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="space-y-2">
+                              <p className="font-medium text-foreground">{transaction.type?.toUpperCase() || 'Transaction'}</p>
+                              <p className="text-sm text-muted-foreground">{transaction.external_reference ? `Reference: ${transaction.external_reference}` : transaction.transaction_id ? `Reference: ${transaction.transaction_id}` : ''}</p>
+                              <p className="text-sm text-muted-foreground">{formatTransactionDateInEAT(transaction.created_at || transaction.date || transaction.createdAt)}</p>
+                              <p className="text-sm"><strong>Amount:</strong> KSH {Number(transaction.amount || transaction.amount).toLocaleString()}</p>
+                              <p className="text-sm"><strong>Method:</strong> {transaction.method || transaction.payment_method || 'Unknown'}</p>
+                              <p className="text-sm"><strong>Status:</strong> <Badge className={isCompleted ? 'bg-green-500/20 text-green-500' : isFailed ? 'bg-red-500/20 text-red-500' : 'bg-yellow-500/20 text-yellow-500'}>{status.charAt(0).toUpperCase() + status.slice(1)}</Badge></p>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={isCompleted || transactionActionInProgress === transaction.id}
+                                onClick={() => handleTransactionStatusChange(transaction.id, 'completed')}
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                disabled={isFailed || transactionActionInProgress === transaction.id}
+                                onClick={() => handleTransactionStatusChange(transaction.id, 'failed')}
+                              >
+                                Reject
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={isPending || transactionActionInProgress === transaction.id}
+                                onClick={() => handleTransactionStatusChange(transaction.id, 'pending')}
+                              >
+                                Revert
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
         <Dialog open={showBetDetailsDialog} onOpenChange={(open) => { if (!open) closeBetDetails(); }}>
           <DialogContent className="sm:max-w-3xl">
             <DialogHeader>
