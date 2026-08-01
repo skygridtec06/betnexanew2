@@ -3541,18 +3541,23 @@ const AdminPortal = () => {
 
                 {games && games.length > 0 ? (
                   <div className="grid gap-3">
-                    {games.map((game) => (
-                      <Card
-                        key={game.id}
-                        className="border-primary/20 bg-card/50 p-4 hover:border-primary/50 transition cursor-pointer"
-                        onClick={() =>
-                          setSelectedGameForEvents({
-                            id: game.id,
-                            name: `${game.home_team} vs ${game.away_team}`,
-                            kickoffTime: game.time,
-                          })
-                        }
-                      >
+                    {games
+                      .filter((game) => {
+                        const id = game.game_id || '';
+                        return !id.startsWith('af-') && !id.startsWith('ab-');
+                      })
+                      .map((game) => (
+                        <Card
+                          key={game.id}
+                          className="border-primary/20 bg-card/50 p-4 hover:border-primary/50 transition cursor-pointer"
+                          onClick={() =>
+                            setSelectedGameForEvents({
+                              id: game.id,
+                              name: `${game.home_team} vs ${game.away_team}`,
+                              kickoffTime: game.time,
+                            })
+                          }
+                        >
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-semibold">

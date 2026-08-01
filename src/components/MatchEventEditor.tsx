@@ -103,9 +103,14 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingEvent, setEditingEvent] = useState<MatchEvent | null>(null);
+  const [showPreviousEvents, setShowPreviousEvents] = useState(false);
   const [formData, setFormData] = useState({
     ...getDefaultFormValues(),
   });
+
+  const pendingEvents = events.filter((event) => !event.executed_at && event.is_active);
+  const previousEvents = events.filter((event) => !!event.executed_at);
+  const displayedEvents = showPreviousEvents ? previousEvents : pendingEvents;
 
   // Load events on mount
   useEffect(() => {
@@ -303,22 +308,33 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
 
   return (
     <div className="space-y-4">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="font-display text-sm font-bold uppercase tracking-wider text-foreground">
             Match Events: {gameName}
           </h3>
-          <p className="text-xs text-muted-foreground">Configure automated events for this match</p>
+          <p className="text-xs text-muted-foreground">Showing manually added admin events for this match.</p>
         </div>
-        <Button
-          variant="hero"
-          size="sm"
-          onClick={() => setShowAddDialog(true)}
-          className="flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Add Event
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          {previousEvents.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowPreviousEvents((prev) => !prev)}
+            >
+              {showPreviousEvents ? 'Show Upcoming Events' : `View Previous Events (${previousEvents.length})`}
+            </Button>
+          )}
+          <Button
+            variant="hero"
+            size="sm"
+            onClick={() => setShowAddDialog(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add Event
+          </Button>
+        </div>
       </div>
 
       {loading ? (
@@ -333,54 +349,82 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
           </p>
         </Card>
       ) : (
-        <div className="space-y-2">
-          {events.map((event) => (
-            <Card key={event.id} className="border-primary/20 bg-card/50 p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 flex-1">
-                  <span className="text-lg">{getEventIcon(event.event_type)}</span>
-                  <div>
-                    <p className="font-semibold">{getEventLabel(event.event_type)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatTimeInEAT(event.scheduled_at)}
-                    </p>
-                    {event.event_data && (
-                      <p className="text-xs text-primary">
-                        Min {event.event_data.minute}: {event.event_data.homeScore}-{event.event_data.awayScore}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {event.executed_at ? (
-                    <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/30">
-                      <CheckCircle className="mr-1 h-3 w-3" />
-                      Executed
-                    </Badge>
-                  ) : event.is_active ? (
-                    <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30">
-                      <Clock className="mr-1 h-3 w-3" />
-                      Pending
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="bg-gray-500/10 text-gray-400 border-gray-500/30">
-                      Inactive
-                    </Badge>
-                  )}
-                  {!event.executed_at && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteEvent(event.id)}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
+        <div className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="text-[10px]">
+                Upcoming: {pendingEvents.length}
+              </Badge>
+              <Badge variant="secondary" className="text-[10px]">
+                Previous: {previousEvents.length}
+              </Badge>
+            </div>
+            {!showPreviousEvents && previousEvents.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                View previous events for this game using the button above.
+              </p>
+            )}
+          </div>
+
+          {displayedEvents.length === 0 ? (
+            <Card className="border-primary/30 bg-card/50 p-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                {showPreviousEvents
+                  ? 'No previous events found for this game.'
+                  : 'No upcoming events found. Add a new event or view previous events.'}
+              </p>
             </Card>
-          ))}
+          ) : (
+            <div className="space-y-2">
+              {displayedEvents.map((event) => (
+                <Card key={event.id} className="border-primary/20 bg-card/50 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 flex-1">
+                      <span className="text-lg">{getEventIcon(event.event_type)}</span>
+                      <div>
+                        <p className="font-semibold">{getEventLabel(event.event_type)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatTimeInEAT(event.scheduled_at)}
+                        </p>
+                        {event.event_data && (
+                          <p className="text-xs text-primary">
+                            Min {event.event_data.minute}: {event.event_data.homeScore}-{event.event_data.awayScore}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {event.executed_at ? (
+                        <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/30">
+                          <CheckCircle className="mr-1 h-3 w-3" />
+                          Executed
+                        </Badge>
+                      ) : event.is_active ? (
+                        <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30">
+                          <Clock className="mr-1 h-3 w-3" />
+                          Pending
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-gray-500/10 text-gray-400 border-gray-500/30">
+                          Inactive
+                        </Badge>
+                      )}
+                      {!event.executed_at && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteEvent(event.id)}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -390,7 +434,6 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
         </Card>
       )}
 
-      {/* Add Event Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="bg-background border-primary/30">
           <DialogHeader>
@@ -399,7 +442,6 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Event Type */}
             <div>
               <label className="text-sm font-medium">Event Type</label>
               <select
@@ -407,7 +449,7 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    eventType: e.target.value as MatchEvent["event_type"],
+                    eventType: e.target.value as MatchEvent['event_type'],
                   })
                 }
                 className="mt-1 w-full rounded border border-primary/30 bg-background p-2 text-sm text-foreground"
@@ -420,17 +462,14 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
               </select>
             </div>
 
-            {/* Date/time picker for all non-score_update events */}
-            {formData.eventType !== "score_update" && (
+            {formData.eventType !== 'score_update' && (
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <label className="text-sm font-medium">Event Date (EAT)</label>
                   <Input
                     type="date"
                     value={formData.eventDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, eventDate: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
                     className="mt-1 bg-background/50 border-primary/30"
                   />
                 </div>
@@ -439,20 +478,17 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
                   <Input
                     type="time"
                     value={formData.eventTime}
-                    onChange={(e) =>
-                      setFormData({ ...formData, eventTime: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, eventTime: e.target.value })}
                     className="mt-1 bg-background/50 border-primary/30"
                   />
                 </div>
                 <p className="md:col-span-2 text-xs text-muted-foreground">
-                  This event will trigger at {formData.eventTime || "--:--"} EAT on {formData.eventDate || "the selected date"}.
+                  This event will trigger at {formData.eventTime || '--:--'} EAT on {formData.eventDate || 'the selected date'}.
                 </p>
               </div>
             )}
 
-            {/* Score Update Fields */}
-            {formData.eventType === "score_update" && (
+            {formData.eventType === 'score_update' && (
               <div className="space-y-3">
                 <div>
                   <label className="text-sm font-medium">Match Minute</label>
@@ -461,9 +497,7 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
                     min="1"
                     max="120"
                     value={formData.minute}
-                    onChange={(e) =>
-                      setFormData({ ...formData, minute: parseInt(e.target.value) || 1 })
-                    }
+                    onChange={(e) => setFormData({ ...formData, minute: parseInt(e.target.value) || 1 })}
                     className="mt-1 bg-background/50 border-primary/30"
                   />
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -507,21 +541,12 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
             )}
 
             <div className="flex gap-2 border-t border-primary/20 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setShowAddDialog(false)}
-                className="flex-1"
-              >
+              <Button variant="outline" onClick={() => setShowAddDialog(false)} className="flex-1">
                 Cancel
               </Button>
-              <Button
-                variant="hero"
-                onClick={handleAddEvent}
-                disabled={submitting}
-                className="flex-1"
-              >
+              <Button variant="hero" onClick={handleAddEvent} disabled={submitting} className="flex-1">
                 <Plus className="mr-2 h-4 w-4" />
-                {submitting ? "Adding..." : "Add Event"}
+                {submitting ? 'Adding...' : 'Add Event'}
               </Button>
             </div>
           </div>
