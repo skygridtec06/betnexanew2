@@ -3543,7 +3543,7 @@ const AdminPortal = () => {
                   <div className="grid gap-3">
                     {games
                       .filter((game) => {
-                        const id = game.game_id || '';
+                        const id = game.id || game.game_id || '';
                         return !id.startsWith('af-') && !id.startsWith('ab-');
                       })
                       .map((game) => (
