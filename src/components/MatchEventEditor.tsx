@@ -55,34 +55,46 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
     return `${parts.year}-${pad2(parts.month)}-${pad2(parts.day)}`;
   };
 
-  const getDefaultEventTime = () => {
+  const getDefaultEatDateTime = (offsetMinutes = 0) => {
     const kickoff = new Date(kickoffTime);
-    const defaultTime = new Date(kickoff.getTime() + 46 * 60 * 1000);
-    return getEatTimeFromIso(defaultTime);
+    if (isNaN(kickoff.getTime())) {
+      const now = new Date();
+      const eatNow = new Date(now.getTime() + EAT_OFFSET_MS + offsetMinutes * 60 * 1000);
+      return {
+        date: `${eatNow.getUTCFullYear()}-${String(eatNow.getUTCMonth() + 1).padStart(2, '0')}-${String(eatNow.getUTCDate()).padStart(2, '0')}`,
+        time: `${String(eatNow.getUTCHours()).padStart(2, '0')}:${String(eatNow.getUTCMinutes()).padStart(2, '0')}`,
+      };
+    }
+
+    const eatKickoff = new Date(kickoff.getTime() + EAT_OFFSET_MS + offsetMinutes * 60 * 1000);
+    return {
+      date: `${eatKickoff.getUTCFullYear()}-${String(eatKickoff.getUTCMonth() + 1).padStart(2, '0')}-${String(eatKickoff.getUTCDate()).padStart(2, '0')}`,
+      time: `${String(eatKickoff.getUTCHours()).padStart(2, '0')}:${String(eatKickoff.getUTCMinutes()).padStart(2, '0')}`,
+    };
   };
 
-  const buildUtcIsoFromEatTime = (eatTime: string) => {
-    const kickoffEat = getEatDateParts(kickoffTime);
-    const [hourStr, minuteStr] = eatTime.split(":");
+  const getDefaultEventTime = () => getDefaultEatDateTime(46).time;
+
+  const buildUtcIsoFromEatDateTime = (eatDate: string, eatTime: string) => {
+    const [year, month, day] = eatDate.split('-').map(Number);
+    const [hourStr, minuteStr] = eatTime.split(':');
     const eatHour = Number(hourStr);
     const eatMinute = Number(minuteStr);
 
-    const baseUtcMs = Date.UTC(
-      kickoffEat.year,
-      kickoffEat.month - 1,
-      kickoffEat.day,
-      eatHour - 3,
-      eatMinute,
-      0,
-      0
-    );
+    const utcMs = Date.UTC(year, month - 1, day, eatHour - 3, eatMinute, 0, 0);
+    return new Date(utcMs).toISOString();
+  };
 
-    // If selected EAT clock time is earlier than kickoff clock time, assume next EAT day.
-    const selectedClock = eatHour * 60 + eatMinute;
-    const kickoffClock = kickoffEat.hour * 60 + kickoffEat.minute;
-    const finalUtcMs = selectedClock < kickoffClock ? baseUtcMs + 24 * 60 * 60 * 1000 : baseUtcMs;
-
-    return new Date(finalUtcMs).toISOString();
+  const getDefaultFormValues = () => {
+    const kickoffDateTime = getDefaultEatDateTime(0);
+    return {
+      eventType: 'score_update' as MatchEvent['event_type'],
+      minute: 45,
+      homeScore: 0,
+      awayScore: 0,
+      eventDate: kickoffDateTime.date,
+      eventTime: kickoffDateTime.time,
+    };
   };
 
   const [events, setEvents] = useState<MatchEvent[]>([]);
@@ -92,11 +104,7 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingEvent, setEditingEvent] = useState<MatchEvent | null>(null);
   const [formData, setFormData] = useState({
-    eventType: "score_update" as MatchEvent["event_type"],
-    minute: 45,
-    homeScore: 0,
-    awayScore: 0,
-    eventTime: getDefaultEventTime(),
+    ...getDefaultFormValues(),
   });
 
   // Load events on mount
@@ -170,18 +178,34 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
       let eventUtcIso: string;
 
       if (formData.eventType === "score_update") {
-        // Schedule based on kickoff time + match minute
         const kickoffMs = new Date(kickoffTime).getTime();
-        eventUtcIso = new Date(kickoffMs + formData.minute * 60 * 1000).toISOString();
-        console.log("🎯 Creating score_update event at minute", formData.minute, "→ UTC:", eventUtcIso);
-      } else {
-        if (!formData.eventTime || !/^\d{2}:\d{2}$/.test(formData.eventTime)) {
-          setErrorMessage("Please select a valid EAT event time (HH:MM format)");
+        if (isNaN(kickoffMs)) {
+          setErrorMessage("Invalid kickoff time. Cannot schedule score update.");
           setSubmitting(false);
           return;
         }
-        eventUtcIso = buildUtcIsoFromEatTime(formData.eventTime);
-        console.log("🎯 Creating event:", { eventType: formData.eventType, eatTime: formData.eventTime, utcIso: eventUtcIso });
+        eventUtcIso = new Date(kickoffMs + formData.minute * 60 * 1000).toISOString();
+        console.log("🎯 Creating score_update event at minute", formData.minute, "→ UTC:", eventUtcIso);
+      } else {
+        if (!formData.eventDate || !formData.eventTime) {
+          setErrorMessage("Please select both event date and time in EAT.");
+          setSubmitting(false);
+          return;
+        }
+
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(formData.eventDate) || !/^\d{2}:\d{2}$/.test(formData.eventTime)) {
+          setErrorMessage("Please use valid EAT date and time values.");
+          setSubmitting(false);
+          return;
+        }
+
+        eventUtcIso = buildUtcIsoFromEatDateTime(formData.eventDate, formData.eventTime);
+        console.log("🎯 Creating event:", {
+          eventType: formData.eventType,
+          eatDate: formData.eventDate,
+          eatTime: formData.eventTime,
+          utcIso: eventUtcIso,
+        });
       }
 
       const eventData: any = {
@@ -396,20 +420,33 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
               </select>
             </div>
 
-            {/* Time picker — hidden for score_update (uses match minute instead) */}
+            {/* Date/time picker for all non-score_update events */}
             {formData.eventType !== "score_update" && (
-              <div>
-                <label className="text-sm font-medium">Event Time (EAT)</label>
-                <Input
-                  type="time"
-                  value={formData.eventTime}
-                  onChange={(e) =>
-                    setFormData({ ...formData, eventTime: e.target.value })
-                  }
-                  className="mt-1 bg-background/50 border-primary/30"
-                />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Event will trigger at {formData.eventTime || "--:--"} EAT on {getEatDateLabelFromIso(kickoffTime)}
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="text-sm font-medium">Event Date (EAT)</label>
+                  <Input
+                    type="date"
+                    value={formData.eventDate}
+                    onChange={(e) =>
+                      setFormData({ ...formData, eventDate: e.target.value })
+                    }
+                    className="mt-1 bg-background/50 border-primary/30"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Event Time (EAT)</label>
+                  <Input
+                    type="time"
+                    value={formData.eventTime}
+                    onChange={(e) =>
+                      setFormData({ ...formData, eventTime: e.target.value })
+                    }
+                    className="mt-1 bg-background/50 border-primary/30"
+                  />
+                </div>
+                <p className="md:col-span-2 text-xs text-muted-foreground">
+                  This event will trigger at {formData.eventTime || "--:--"} EAT on {formData.eventDate || "the selected date"}.
                 </p>
               </div>
             )}
@@ -430,7 +467,7 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
                     className="mt-1 bg-background/50 border-primary/30"
                   />
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Score will update at minute {formData.minute} (kickoff + {formData.minute} min)
+                    Score update is scheduled for minute {formData.minute}.
                   </p>
                 </div>
 
