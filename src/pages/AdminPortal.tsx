@@ -4750,6 +4750,24 @@ const AdminPortal = () => {
                 </div>
               )}
 
+              {selectedUserTransactions?.activation_fees && selectedUserTransactions.activation_fees.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-base font-semibold text-slate-200">Activation Fees</h4>
+                  {selectedUserTransactions.activation_fees.map((fee: any) => (
+                    <Card key={fee.id} className="bg-gradient-to-br from-orange-900 to-orange-800 border-orange-600 text-orange-50 p-4 rounded-xl">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-semibold">{fee.fee_type ? fee.fee_type.toUpperCase() : 'Activation Fee'}</p>
+                          <p className="text-sm opacity-80">{formatTransactionDateInEAT(fee.created_at)}</p>
+                          <p className="text-sm"><strong>Amount:</strong> KSH {Number(fee.amount || 0).toLocaleString()}</p>
+                          <p className="text-sm"><strong>Status:</strong> <Badge className={fee.status === 'completed' ? 'bg-orange-500/20 text-orange-100' : fee.status === 'pending' ? 'bg-amber-400/20 text-amber-200' : 'bg-rose-500/20 text-rose-100'}>{(fee.status || '').charAt(0).toUpperCase() + (fee.status || '').slice(1)}</Badge></p>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
               <div className="rounded-[28px] border border-fuchsia-500/10 bg-gradient-to-br from-slate-900/95 via-slate-950/95 to-slate-900 p-4 shadow-xl shadow-fuchsia-500/10">
                 {userTransactionsLoading ? (
                   <div className="text-center text-sm text-muted-foreground">Loading transactions...</div>
@@ -4762,17 +4780,40 @@ const AdminPortal = () => {
                       const isPending = status === 'pending';
                       const isCompleted = status === 'completed';
                       const isFailed = status === 'failed' || status === 'cancelled';
+
+                      // Determine visual category
+                      const methodLower = (transaction.method || transaction.payment_method || '').toString().toLowerCase();
+                      const txType = (transaction.type || '').toString().toLowerCase();
+
+                      let cardClasses = 'border border-violet-500/10 p-4 rounded-xl';
+                      let badgeGradient = isCompleted ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-400/20 text-emerald-200' : isFailed ? 'bg-gradient-to-r from-rose-500/20 to-pink-400/20 text-rose-200' : 'bg-gradient-to-r from-amber-400/20 to-yellow-300/20 text-amber-200';
+
+                      // Apply colors per category: withdrawal, priority fee, activation fee, normal deposit
+                      if (txType === 'withdrawal') {
+                        cardClasses = 'bg-gradient-to-br from-cyan-900 to-cyan-800 border-cyan-600 text-cyan-50 p-4 rounded-xl shadow-md';
+                        badgeGradient = isCompleted ? 'bg-cyan-600/20 text-cyan-100' : isFailed ? 'bg-rose-600/20 text-rose-100' : 'bg-amber-400/20 text-amber-200';
+                      } else if (methodLower.includes('priority')) {
+                        cardClasses = 'bg-gradient-to-br from-purple-900 to-purple-800 border-purple-600 text-purple-50 p-4 rounded-xl shadow-md';
+                        badgeGradient = isCompleted ? 'bg-purple-500/20 text-purple-100' : isFailed ? 'bg-rose-600/20 text-rose-100' : 'bg-amber-400/20 text-amber-200';
+                      } else if (methodLower.includes('activation') || transaction.fee_type === 'activation') {
+                        cardClasses = 'bg-gradient-to-br from-orange-900 to-orange-800 border-orange-600 text-orange-50 p-4 rounded-xl shadow-md';
+                        badgeGradient = isCompleted ? 'bg-orange-500/20 text-orange-100' : isFailed ? 'bg-rose-600/20 text-rose-100' : 'bg-amber-400/20 text-amber-200';
+                      } else if (txType === 'deposit') {
+                        cardClasses = 'bg-gradient-to-br from-emerald-900 to-emerald-800 border-emerald-600 text-emerald-50 p-4 rounded-xl shadow-md';
+                        badgeGradient = isCompleted ? 'bg-emerald-500/20 text-emerald-100' : isFailed ? 'bg-rose-600/20 text-rose-100' : 'bg-amber-400/20 text-amber-200';
+                      }
+
                       return (
-                        <Card key={transaction.id} className="border border-violet-500/10 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 p-4 shadow-[0_16px_30px_rgba(99,102,241,0.08)]">
+                        <Card key={transaction.id} className={cardClasses}>
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div className="space-y-2">
-                              <p className="font-medium text-foreground">{transaction.type?.toUpperCase() || 'Transaction'}</p>
-                              <p className="text-sm text-slate-300">{transaction.external_reference ? `Reference: ${transaction.external_reference}` : transaction.transaction_id ? `Reference: ${transaction.transaction_id}` : ''}</p>
-                              <p className="text-sm text-slate-400">{formatTransactionDateInEAT(transaction.created_at || transaction.date || transaction.createdAt)}</p>
+                              <p className="font-semibold">{transaction.type?.toUpperCase() || 'Transaction'}</p>
+                              <p className="text-sm opacity-80">{transaction.external_reference ? `Reference: ${transaction.external_reference}` : transaction.transaction_id ? `Reference: ${transaction.transaction_id}` : ''}</p>
+                              <p className="text-sm opacity-70">{formatTransactionDateInEAT(transaction.created_at || transaction.date || transaction.createdAt)}</p>
                               <p className="text-sm"><strong>Amount:</strong> KSH {Number(transaction.amount || transaction.amount).toLocaleString()}</p>
                               <p className="text-sm"><strong>Method:</strong> {transaction.method || transaction.payment_method || 'Unknown'}</p>
                               <p className="text-sm"><strong>Status:</strong>{' '}
-                                <Badge className={isCompleted ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-400/20 text-emerald-200' : isFailed ? 'bg-gradient-to-r from-rose-500/20 to-pink-400/20 text-rose-200' : 'bg-gradient-to-r from-amber-400/20 to-yellow-300/20 text-amber-200'}>
+                                <Badge className={badgeGradient}>
                                   {status.charAt(0).toUpperCase() + status.slice(1)}
                                 </Badge>
                               </p>
