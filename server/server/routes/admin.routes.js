@@ -5071,11 +5071,32 @@ router.put('/transactions/:transactionId/mark-rejected', checkAdmin, async (req,
       return res.status(404).json({ success: false, message: 'Transaction not found' });
     }
 
-    if (transaction.status !== 'pending') {
+    if (transaction.status === 'failed') {
       return res.status(400).json({
         success: false,
-        message: `Transaction is already ${transaction.status}, cannot reject`
+        message: `Transaction is already failed and cannot be rejected again`
       });
+    }
+
+    if (transaction.status === 'completed' && transaction.type === 'deposit') {
+      try {
+        const { data: user, error: userError } = await supabase
+          .from('users')
+          .select('account_balance')
+          .eq('id', transaction.user_id)
+          .single();
+
+        if (!userError && user) {
+          const newBalance = Math.max(0, (parseFloat(user.account_balance) || 0) - parseFloat(transaction.amount));
+          await supabase
+            .from('users')
+            .update({ account_balance: newBalance })
+            .eq('id', transaction.user_id);
+          console.log(`✅ Reversed completed deposit balance: -KSH ${transaction.amount}`);
+        }
+      } catch (balanceError) {
+        console.warn('⚠️ Failed to reverse credited balance for rejected deposit:', balanceError.message);
+      }
     }
 
     // Update the source table

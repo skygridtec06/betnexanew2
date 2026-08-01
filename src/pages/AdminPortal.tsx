@@ -4731,24 +4731,26 @@ const AdminPortal = () => {
             setSelectedTransactionUser(null);
           }
         }}>
-          <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-hidden">
-            <DialogHeader>
-              <DialogTitle>{selectedTransactionUser ? `Transactions for ${selectedTransactionUser.name}` : 'User Transactions'}</DialogTitle>
-              <DialogDescription>
+          <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-hidden rounded-[32px] border border-violet-500/15 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 shadow-[0_24px_80px_rgba(145,92,182,0.22)] ring-1 ring-violet-500/10">
+            <DialogHeader className="bg-slate-900/90 border-b border-violet-500/10 px-6 py-5">
+              <DialogTitle className="text-2xl font-semibold text-slate-50">
+                {selectedTransactionUser ? `Transactions for ${selectedTransactionUser.name}` : 'User Transactions'}
+              </DialogTitle>
+              <DialogDescription className="mt-1 text-sm text-slate-300">
                 Showing all deposits and withdrawals for this user. Use Approve, Reject or Revert to update transaction status.
               </DialogDescription>
             </DialogHeader>
-            <div className="mt-4 space-y-4 overflow-y-auto max-h-[68vh] pr-2">
+            <div className="mt-4 space-y-4 overflow-y-auto max-h-[68vh] pr-3 pb-4">
               {selectedUserTransactions?.user && (
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <div><strong>Name:</strong> {selectedTransactionUser?.name || selectedUserTransactions.user?.username || 'N/A'}</div>
-                  <div><strong>Phone:</strong> {selectedUserTransactions.user?.phone_number || selectedTransactionUser?.phone || 'N/A'}</div>
-                  <div><strong>User ID:</strong> {selectedUserTransactions.user?.id || selectedTransactionUser?.id || 'N/A'}</div>
-                  <div><strong>Balance:</strong> KSH {selectedUserTransactions.user?.account_balance?.toLocaleString() ?? '0'}</div>
+                <div className="grid grid-cols-1 gap-3 rounded-[28px] border border-violet-500/15 bg-gradient-to-r from-slate-900/95 via-violet-950/80 to-slate-950 p-4 shadow-inner shadow-violet-500/10 sm:grid-cols-2">
+                  <div className="text-slate-200"><span className="text-slate-400">Name:</span> {selectedTransactionUser?.name || selectedUserTransactions.user?.username || 'N/A'}</div>
+                  <div className="text-slate-200"><span className="text-slate-400">Phone:</span> {selectedUserTransactions.user?.phone_number || selectedTransactionUser?.phone || 'N/A'}</div>
+                  <div className="text-slate-200"><span className="text-slate-400">User ID:</span> {selectedUserTransactions.user?.id || selectedTransactionUser?.id || 'N/A'}</div>
+                  <div className="text-slate-200"><span className="text-slate-400">Balance:</span> KSH {selectedUserTransactions.user?.account_balance?.toLocaleString() ?? '0'}</div>
                 </div>
               )}
 
-              <div className="rounded-md border border-border bg-card p-4">
+              <div className="rounded-[28px] border border-fuchsia-500/10 bg-gradient-to-br from-slate-900/95 via-slate-950/95 to-slate-900 p-4 shadow-xl shadow-fuchsia-500/10">
                 {userTransactionsLoading ? (
                   <div className="text-center text-sm text-muted-foreground">Loading transactions...</div>
                 ) : !selectedUserTransactions?.transactions || selectedUserTransactions.transactions.length === 0 ? (
@@ -4761,15 +4763,19 @@ const AdminPortal = () => {
                       const isCompleted = status === 'completed';
                       const isFailed = status === 'failed' || status === 'cancelled';
                       return (
-                        <Card key={transaction.id} className="border-border bg-background p-4">
+                        <Card key={transaction.id} className="border border-violet-500/10 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 p-4 shadow-[0_16px_30px_rgba(99,102,241,0.08)]">
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div className="space-y-2">
                               <p className="font-medium text-foreground">{transaction.type?.toUpperCase() || 'Transaction'}</p>
-                              <p className="text-sm text-muted-foreground">{transaction.external_reference ? `Reference: ${transaction.external_reference}` : transaction.transaction_id ? `Reference: ${transaction.transaction_id}` : ''}</p>
-                              <p className="text-sm text-muted-foreground">{formatTransactionDateInEAT(transaction.created_at || transaction.date || transaction.createdAt)}</p>
+                              <p className="text-sm text-slate-300">{transaction.external_reference ? `Reference: ${transaction.external_reference}` : transaction.transaction_id ? `Reference: ${transaction.transaction_id}` : ''}</p>
+                              <p className="text-sm text-slate-400">{formatTransactionDateInEAT(transaction.created_at || transaction.date || transaction.createdAt)}</p>
                               <p className="text-sm"><strong>Amount:</strong> KSH {Number(transaction.amount || transaction.amount).toLocaleString()}</p>
                               <p className="text-sm"><strong>Method:</strong> {transaction.method || transaction.payment_method || 'Unknown'}</p>
-                              <p className="text-sm"><strong>Status:</strong> <Badge className={isCompleted ? 'bg-green-500/20 text-green-500' : isFailed ? 'bg-red-500/20 text-red-500' : 'bg-yellow-500/20 text-yellow-500'}>{status.charAt(0).toUpperCase() + status.slice(1)}</Badge></p>
+                              <p className="text-sm"><strong>Status:</strong>{' '}
+                                <Badge className={isCompleted ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-400/20 text-emerald-200' : isFailed ? 'bg-gradient-to-r from-rose-500/20 to-pink-400/20 text-rose-200' : 'bg-gradient-to-r from-amber-400/20 to-yellow-300/20 text-amber-200'}>
+                                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                                </Badge>
+                              </p>
                             </div>
                             <div className="flex flex-wrap gap-2">
                               <Button
