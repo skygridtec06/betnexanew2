@@ -4731,14 +4731,14 @@ const AdminPortal = () => {
             setSelectedTransactionUser(null);
           }
         }}>
-          <DialogContent className="sm:max-w-5xl">
+          <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-hidden">
             <DialogHeader>
               <DialogTitle>{selectedTransactionUser ? `Transactions for ${selectedTransactionUser.name}` : 'User Transactions'}</DialogTitle>
               <DialogDescription>
                 Showing all deposits and withdrawals for this user. Use Approve, Reject or Revert to update transaction status.
               </DialogDescription>
             </DialogHeader>
-            <div className="mt-4 space-y-4">
+            <div className="mt-4 space-y-4 overflow-y-auto max-h-[68vh] pr-2">
               {selectedUserTransactions?.user && (
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div><strong>Name:</strong> {selectedTransactionUser?.name || selectedUserTransactions.user?.username || 'N/A'}</div>
