@@ -254,19 +254,54 @@ async function ensureUserDarajaFunding({
     // Try cache fallback
     const cached = paymentCache.getPayment(checkoutRequestId);
     if (!cached || !cached.user_id) {
-      return { success: false, error: 'User Daraja payment record not found in DB or cache' };
+      // If we have an Mpesa receipt (came from callback), check for existing transaction by mpesa_receipt
+      if (mpesaReceipt) {
+        try {
+          const { data: txByReceipt } = await supabase
+            .from('transactions')
+            .select('id, user_id, amount, status, external_reference, checkout_request_id')
+            .eq('mpesa_receipt', mpesaReceipt)
+            .maybeSingle();
+
+          if (txByReceipt) {
+            // If this existing transaction is already completed, we must not double-credit
+            if (txByReceipt.status === 'completed') {
+              const { data: u } = await supabase
+                .from('users').select('account_balance').eq('id', txByReceipt.user_id).maybeSingle();
+              return {
+                success: true,
+                alreadyProcessed: true,
+                creditedAmount: parseFloat(txByReceipt.amount) || 0,
+                newBalance: parseFloat(u?.account_balance) || 0,
+                userId: txByReceipt.user_id,
+              };
+            }
+
+            // If a pending transaction exists by mpesa_receipt, treat it as the transaction to complete
+            transaction = txByReceipt;
+          }
+        } catch (receiptErr) {
+          console.warn('[ensureUserDarajaFunding] mpesa_receipt lookup failed:', receiptErr.message);
+        }
+      }
+
+      if (!transaction) {
+        return { success: false, error: 'User Daraja payment record not found in DB or cache' };
+      }
+    } else {
+      // We have a cached pending payment: register it in DB if needed
+      const reg = await registerUserDarajaAttempt({
+        userId: cached.user_id,
+        phoneNumber: cached.phone_number || phoneNumber,
+        amount: cached.amount || amount,
+        externalReference: cached.external_reference || cached.externalReference,
+        checkoutRequestId,
+        merchantRequestId: cached.merchantRequestId,
+        paymentType: cached.payment_type || 'deposit',
+      });
+      if (!reg.success) return reg;
+      transaction = reg.transaction;
     }
-    const reg = await registerUserDarajaAttempt({
-      userId: cached.user_id,
-      phoneNumber: cached.phone_number || phoneNumber,
-      amount: cached.amount || amount,
-      externalReference: cached.external_reference || cached.externalReference,
-      checkoutRequestId,
-      merchantRequestId: cached.merchantRequestId,
-      paymentType: cached.payment_type || 'deposit',
-    });
-    if (!reg.success) return reg;
-    transaction = reg.transaction;
   }
 
   if (!transaction) {
