@@ -3544,43 +3544,51 @@ const AdminPortal = () => {
                     {games
                       .filter((game) => {
                         const id = game.id || game.game_id || '';
-                        return !id.startsWith('af-') && !id.startsWith('ab-');
+                        return (
+                          !id.startsWith('af-') &&
+                          !id.startsWith('ab-') &&
+                          (game.status === 'upcoming' || game.status === 'live')
+                        );
                       })
-                      .map((game) => (
-                        <Card
-                          key={game.id}
-                          className="border-primary/20 bg-card/50 p-4 hover:border-primary/50 transition cursor-pointer"
-                          onClick={() =>
-                            setSelectedGameForEvents({
-                              id: game.id,
-                              name: `${game.home_team} vs ${game.away_team}`,
-                              kickoffTime: game.time,
-                            })
-                          }
-                        >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-semibold">
-                              {game.home_team} vs {game.away_team}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatTimeInEAT(game.time)}
-                            </p>
-                          </div>
-                          <Badge variant="outline">
-                            {game.status === "live" && (
-                              <span className="text-green-400">LIVE</span>
-                            )}
-                            {game.status === "upcoming" && (
-                              <span className="text-blue-400">UPCOMING</span>
-                            )}
-                            {game.status === "finished" && (
-                              <span className="text-gray-400">FINISHED</span>
-                            )}
-                          </Badge>
-                        </div>
-                      </Card>
-                    ))}
+                      .map((game) => {
+                        const homeTeam = game.homeTeam || game.home_team || 'Home';
+                        const awayTeam = game.awayTeam || game.away_team || 'Away';
+                        return (
+                          <Card
+                            key={game.id}
+                            className="border-primary/20 bg-card/50 p-4 hover:border-primary/50 transition cursor-pointer"
+                            onClick={() =>
+                              setSelectedGameForEvents({
+                                id: game.id,
+                                name: `${homeTeam} vs ${awayTeam}`,
+                                kickoffTime: game.time,
+                              })
+                            }
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-semibold">
+                                  {homeTeam} vs {awayTeam}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {formatTimeInEAT(game.time)}
+                                </p>
+                              </div>
+                              <Badge variant="outline">
+                                {game.status === "live" && (
+                                  <span className="text-green-400">LIVE</span>
+                                )}
+                                {game.status === "upcoming" && (
+                                  <span className="text-blue-400">UPCOMING</span>
+                                )}
+                                {game.status === "finished" && (
+                                  <span className="text-gray-400">FINISHED</span>
+                                )}
+                              </Badge>
+                            </div>
+                          </Card>
+                        );
+                      })}
                   </div>
                 ) : (
                   <div className="rounded-xl border border-border/50 bg-card p-8 text-center text-muted-foreground">
