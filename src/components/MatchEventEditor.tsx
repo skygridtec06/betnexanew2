@@ -101,6 +101,7 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [executionMessage, setExecutionMessage] = useState<string | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingEvent, setEditingEvent] = useState<MatchEvent | null>(null);
   const [showPreviousEvents, setShowPreviousEvents] = useState(false);
@@ -114,17 +115,51 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
 
   // Load events on mount
   useEffect(() => {
-    console.log('🔄 [MatchEventEditor] Component mounted, adminPhone:', adminPhone ? adminPhone.substring(0, 5) + '...' : 'MISSING');
-    loadEvents();
+    const initialize = async () => {
+      console.log('🔄 [MatchEventEditor] Component mounted, adminPhone:', adminPhone ? adminPhone.substring(0, 5) + '...' : 'MISSING');
+      if (adminPhone) {
+        await executePendingEvents();
+      }
+      await loadEvents();
+    };
+
+    initialize();
   }, [gameId, adminPhone]);
 
   // Admin phone is passed as prop from AdminPortal
   const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
 
+  const executePendingEvents = async () => {
+    if (!adminPhone) return;
+    try {
+      const response = await fetch(`${apiUrl}/api/admin/match-events/${gameId}/execute-pending?phone=${encodeURIComponent(adminPhone)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        console.warn("⚠️ Could not execute due events", data);
+        setErrorMessage(data?.error || "Failed to execute pending events");
+        return;
+      }
+
+      if (data.eventsExecuted > 0) {
+        setExecutionMessage(`Executed ${data.eventsExecuted} due event(s)`);
+      } else {
+        setExecutionMessage("No due events were pending execution.");
+      }
+    } catch (error) {
+      console.error("Error executing pending events:", error);
+      setErrorMessage(`Error executing pending events: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
   const loadEvents = async () => {
     try {
       setLoading(true);
       setErrorMessage(null);
+      setExecutionMessage(null);
       
       if (!adminPhone) {
         console.error("❌ Admin phone not provided to MatchEventEditor");
@@ -314,6 +349,9 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
             Match Events: {gameName}
           </h3>
           <p className="text-xs text-muted-foreground">Showing manually added admin events for this match.</p>
+          <p className="text-xs text-muted-foreground">
+            Times are entered in EAT and shown in EAT. The system stores timestamps in UTC internally for reliable execution.
+          </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           {previousEvents.length > 0 && (
@@ -326,6 +364,16 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
             </Button>
           )}
           <Button
+            variant="secondary"
+            size="sm"
+            onClick={async () => {
+              await executePendingEvents();
+              await loadEvents();
+            }}
+          >
+            Sync Events
+          </Button>
+          <Button
             variant="hero"
             size="sm"
             onClick={() => setShowAddDialog(true)}
@@ -336,6 +384,11 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
           </Button>
         </div>
       </div>
+      {executionMessage && (
+        <Card className="border-blue-500/30 bg-blue-500/10 p-3">
+          <p className="text-sm text-blue-100">{executionMessage}</p>
+        </Card>
+      )}
 
       {loading ? (
         <Card className="border-primary/30 bg-card/50 p-8 text-center">
@@ -376,53 +429,73 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
             </Card>
           ) : (
             <div className="space-y-2">
-              {displayedEvents.map((event) => (
-                <Card key={event.id} className="border-primary/20 bg-card/50 p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 flex-1">
-                      <span className="text-lg">{getEventIcon(event.event_type)}</span>
-                      <div>
-                        <p className="font-semibold">{getEventLabel(event.event_type)}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatTimeInEAT(event.scheduled_at)}
-                        </p>
-                        {event.event_data && (
-                          <p className="text-xs text-primary">
-                            Min {event.event_data.minute}: {event.event_data.homeScore}-{event.event_data.awayScore}
+              {displayedEvents.map((event) => {
+                const status = event.executed_at
+                  ? 'completed'
+                  : !event.is_active
+                  ? 'failed'
+                  : 'pending';
+
+                const statusBadge = {
+                  completed: {
+                    label: 'Completed',
+                    icon: <CheckCircle className="mr-1 h-3 w-3" />,
+                    className: 'bg-green-500/10 text-green-400 border-green-500/30',
+                  },
+                  pending: {
+                    label: 'Pending',
+                    icon: <Clock className="mr-1 h-3 w-3" />,
+                    className: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
+                  },
+                  failed: {
+                    label: 'Failed',
+                    icon: <AlertCircle className="mr-1 h-3 w-3" />,
+                    className: 'bg-red-500/10 text-red-400 border-red-500/30',
+                  },
+                }[status];
+
+                return (
+                  <Card key={event.id} className="border-primary/20 bg-card/50 p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 flex-1">
+                        <span className="text-lg">{getEventIcon(event.event_type)}</span>
+                        <div>
+                          <p className="font-semibold">{getEventLabel(event.event_type)}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatTimeInEAT(event.scheduled_at)} EAT
                           </p>
+                          {event.event_data && (
+                            <p className="text-xs text-primary">
+                              Min {event.event_data.minute}: {event.event_data.homeScore}-{event.event_data.awayScore}
+                            </p>
+                          )}
+                          {event.executed_at && (
+                            <p className="text-xs text-green-400">
+                              Completed at {formatTimeInEAT(event.executed_at)} EAT
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className={statusBadge.className}>
+                          {statusBadge.icon}
+                          {statusBadge.label}
+                        </Badge>
+                        {!event.executed_at && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteEvent(event.id)}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {event.executed_at ? (
-                        <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/30">
-                          <CheckCircle className="mr-1 h-3 w-3" />
-                          Executed
-                        </Badge>
-                      ) : event.is_active ? (
-                        <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30">
-                          <Clock className="mr-1 h-3 w-3" />
-                          Pending
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-gray-500/10 text-gray-400 border-gray-500/30">
-                          Inactive
-                        </Badge>
-                      )}
-                      {!event.executed_at && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteEvent(event.id)}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
