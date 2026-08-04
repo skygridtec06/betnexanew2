@@ -6,14 +6,17 @@
 const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = process.env.SUPABASE_URL || 'https://eaqogmybihiqzivuwyav.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+let supabaseKey = supabaseServiceKey || supabaseAnonKey;
+let supabaseKeyType = supabaseServiceKey ? 'SERVICE_KEY' : (supabaseAnonKey ? 'ANON_KEY' : 'NO_KEY');
 
 console.log('🔧 Database initialization:');
 console.log('   SUPABASE_URL:', supabaseUrl ? '✓ configured' : '❌ missing');
 console.log('   URL value:', supabaseUrl);
-console.log('   SUPABASE_SERVICE_KEY:', process.env.SUPABASE_SERVICE_KEY ? '✓ configured' : '❌ missing');
-console.log('   SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? '✓ configured' : '❌ missing');
-console.log('   Using key type:', process.env.SUPABASE_SERVICE_KEY ? 'SERVICE_KEY' : (process.env.SUPABASE_ANON_KEY ? 'ANON_KEY' : '❌ NO KEY AVAILABLE'));
+console.log('   SUPABASE_SERVICE_KEY:', supabaseServiceKey ? '✓ configured' : '❌ missing');
+console.log('   SUPABASE_ANON_KEY:', supabaseAnonKey ? '✓ configured' : '❌ missing');
+console.log('   Using key type:', supabaseKeyType);
 
 if (!supabaseUrl || !supabaseKey) {
   console.warn('⚠️ Warning: Missing SUPABASE_URL or SUPABASE_KEY');
@@ -55,6 +58,22 @@ try {
           console.error('\n🚨 Supabase API key appears to be invalid or unregistered.');
           console.error('   Please check SUPABASE_SERVICE_KEY / SUPABASE_ANON_KEY in your environment or .env file.');
           console.error('   If this is a deployment (Vercel), update the project environment variables and redeploy.\n');
+
+          if (supabaseServiceKey && supabaseAnonKey && supabaseKeyType === 'SERVICE_KEY') {
+            console.warn('⚠️ Service key validation failed. Falling back to SUPABASE_ANON_KEY for read-only operations.');
+            supabaseKey = supabaseAnonKey;
+            supabaseKeyType = 'ANON_KEY';
+            supabase = createClient(supabaseUrl, supabaseKey, {
+              auth: { persistSession: false, autoRefreshToken: false },
+              global: {
+                headers: { 'x-connection-pool': 'true' },
+                fetch: (url, options) => fetch(url, { ...options, keepalive: true }),
+              },
+              db: { schema: 'public' },
+            });
+            console.log('✅ Fallen back to SUPABASE_ANON_KEY');
+            supabase.__isKeyValid = true;
+          }
         }
       } else {
         console.log('✅ Initial Supabase connection test PASSED');
