@@ -47,9 +47,19 @@ try {
         console.error('   Status:', error.status || 'No status');
         console.error('   Hint:', error.hint || 'No hint');
         console.error('   Details:', error.details || 'No details');
+
+        // Detect common Supabase key issues and mark client as invalid
+        const msg = (error.message || '').toLowerCase();
+        if (msg.includes('unregistered api key') || msg.includes('invalid api key') || msg.includes('permission denied')) {
+          supabase.__isKeyValid = false;
+          console.error('\n🚨 Supabase API key appears to be invalid or unregistered.');
+          console.error('   Please check SUPABASE_SERVICE_KEY / SUPABASE_ANON_KEY in your environment or .env file.');
+          console.error('   If this is a deployment (Vercel), update the project environment variables and redeploy.\n');
+        }
       } else {
         console.log('✅ Initial Supabase connection test PASSED');
         console.log('   Tables accessible: games table is reachable');
+        supabase.__isKeyValid = true;
       }
     } catch (err) {
       console.error('❌ Connection test exception:', err.message || err);
@@ -61,5 +71,8 @@ try {
   console.error('❌ Supabase initialization FAILED:', error.message);
   console.warn('   Games API will return empty results');
 }
+
+// Helper to check whether the Supabase key validated at startup
+supabase.checkKeyValid = () => !!supabase.__isKeyValid;
 
 module.exports = supabase;
