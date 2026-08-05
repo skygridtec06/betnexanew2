@@ -8,8 +8,8 @@ const { createClient } = require('@supabase/supabase-js');
 const supabaseUrl = process.env.SUPABASE_URL || 'https://eaqogmybihiqzivuwyav.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
-let supabaseKey = supabaseServiceKey || supabaseAnonKey;
-let supabaseKeyType = supabaseServiceKey ? 'SERVICE_KEY' : (supabaseAnonKey ? 'ANON_KEY' : 'NO_KEY');
+const supabaseKeyType = supabaseServiceKey ? 'SERVICE_KEY' : (supabaseAnonKey ? 'ANON_KEY' : 'NO_KEY');
+const supabaseKey = supabaseAnonKey || supabaseServiceKey;
 
 console.log('🔧 Database initialization:');
 console.log('   SUPABASE_URL:', supabaseUrl ? '✓ configured' : '❌ missing');
@@ -26,13 +26,21 @@ if (!supabaseUrl || !supabaseKey) {
 let supabase = null;
 
 try {
+  const globalHeaders = {
+    'x-connection-pool': 'true'
+  };
+
+  if (supabaseServiceKey && supabaseAnonKey) {
+    globalHeaders.Authorization = `Bearer ${supabaseServiceKey}`;
+    globalHeaders.apikey = supabaseAnonKey;
+  }
+
   supabase = createClient(supabaseUrl, supabaseKey, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: {
-      headers: { 'x-connection-pool': 'true' },
-      fetch: (url, options) => fetch(url, { ...options, keepalive: true }),
+      headers: globalHeaders
     },
-    db: { schema: 'public' },
+    db: { schema: 'public' }
   });
   console.log('✅ Supabase client initialized successfully');
   
