@@ -10,6 +10,7 @@ import { useBetAutoCalculation } from "@/hooks/useBetAutoCalculation";
 import { useOdds } from "@/context/OddsContext";
 import { useUser } from "@/context/UserContext";
 import { getPicksFromUrl } from "@/lib/shareableLinks";
+import { buildApiUrl } from "@/lib/api";
 
 type MatchView = "hot" | "upcoming" | "live" | "ended";
 
@@ -85,6 +86,7 @@ const Index = ({ sport = 'football' }: IndexProps) => {
   const [invalidPicksMessage, setInvalidPicksMessage] = useState<string>("");
   const [isLoadingBetslip, setIsLoadingBetslip] = useState(false);
   const { games: apiGames, isLoading: isLoadingGames } = useOdds();
+  const apiBaseUrl = buildApiUrl('/api');
 
   // Validate picks against current games
   const validatePicks = (picks: BetSlipItem[], gamesToCheck: any[]): { valid: BetSlipItem[]; invalid: boolean; message: string } => {

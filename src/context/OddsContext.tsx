@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef } from "react";
+import { buildApiUrl } from "@/lib/api";
 
 export interface GameOdds {
   id: string;
@@ -89,14 +90,14 @@ export function OddsProvider({ children }: { children: ReactNode }) {
     fetchInProgressRef.current = true;
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = buildApiUrl('/api');
       
       console.log('🔄 Fetching fresh games from:', apiUrl);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 second timeout
 
-      const response = await fetch(`${apiUrl}/api/admin/games`, {
+      const response = await fetch(`${apiUrl}/admin/games`, {
         signal: controller.signal,
         keepalive: true,
       });
