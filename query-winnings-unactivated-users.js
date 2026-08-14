@@ -1,8 +1,8 @@
 const { createClient } = require('@supabase/supabase-js');
 
 // Initialize Supabase client with service key (for admin access)
-const supabaseUrl = 'https://eaqogmybihiqzivuwyav.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || 'sb_secret_JnzsAy2ljyd__NdzokUXhA_2k7loTgg';
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
