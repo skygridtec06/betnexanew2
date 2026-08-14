@@ -16,9 +16,9 @@ const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANO
 ```
 
 ### Environment Variables (Server .env)
-✅ **SUPABASE_URL:** `https://eaqogmybihiqzivuwyav.supabase.co`  
-✅ **SUPABASE_ANON_KEY:** `sb_publishable_Lc8dQIzND4_qyIbN2EuQrQ_0Ma0OINQ`  
-✅ **SUPABASE_SERVICE_KEY:** `sb_secret_JnzsAy2ljyd__NdzokUXhA_2k7loTgg`
+✅ **SUPABASE_URL:** Set in environment  
+✅ **SUPABASE_ANON_KEY:** Set in environment  
+✅ **SUPABASE_SERVICE_KEY:** Set in environment
 
 ### Database Connection Initialization
 ```javascript
@@ -297,8 +297,8 @@ Run this Node.js script:
 const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(
-  'https://eaqogmybihiqzivuwyav.supabase.co',
-  'sb_secret_JnzsAy2ljyd__NdzokUXhA_2k7loTgg'
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
 );
 
 // Test read
