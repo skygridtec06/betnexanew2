@@ -17,6 +17,40 @@ const chunkArray = (arr, size) => {
   return chunks;
 };
 
+const getPhoneCandidates = (inputPhone) => {
+  const raw = String(inputPhone || '').trim();
+  if (!raw) return [];
+
+  const digits = raw.replace(/\D/g, '');
+  const candidates = new Set([raw]);
+
+  if (digits) {
+    candidates.add(digits);
+  }
+
+  if (digits.startsWith('0') && digits.length === 10) {
+    const tail = digits.slice(1);
+    candidates.add(`+254${tail}`);
+    candidates.add(`254${tail}`);
+  }
+
+  if (digits.startsWith('254') && digits.length === 12) {
+    const tail = digits.slice(3);
+    candidates.add(`0${tail}`);
+    candidates.add(`+254${tail}`);
+  }
+
+  if (raw.startsWith('+254')) {
+    const tail = raw.slice(4).replace(/\D/g, '');
+    if (tail) {
+      candidates.add(`0${tail}`);
+      candidates.add(`254${tail}`);
+    }
+  }
+
+  return [...candidates].filter(Boolean);
+};
+
 const fetchUsersByIds = async (userIds) => {
   const ids = [...new Set((userIds || []).filter(Boolean))];
   if (ids.length === 0) {
@@ -70,12 +104,13 @@ router.post('/place', async (req, res) => {
     }
 
     if (!user && phoneNumber) {
+      const candidates = getPhoneCandidates(phoneNumber);
       const byPhoneResult = await supabase
         .from('users')
         .select('id, account_balance, stakeable_balance, withdrawable_balance, total_bets, phone_number')
-        .eq('phone_number', phoneNumber)
-        .maybeSingle();
-      user = byPhoneResult.data;
+        .in('phone_number', candidates)
+        .limit(1);
+      user = Array.isArray(byPhoneResult.data) && byPhoneResult.data.length > 0 ? byPhoneResult.data[0] : null;
       userError = byPhoneResult.error;
     }
 
@@ -262,11 +297,14 @@ router.get('/user', async (req, res) => {
     }
 
     // Get user
-    const { data: user, error: userError } = await supabase
+    const candidates = getPhoneCandidates(phoneNumber);
+    const { data: users, error: userError } = await supabase
       .from('users')
-      .select('id')
-      .eq('phone_number', phoneNumber)
-      .single();
+      .select('id, phone_number')
+      .in('phone_number', candidates)
+      .limit(1);
+
+    const user = Array.isArray(users) && users.length > 0 ? users[0] : null;
 
     if (userError || !user) {
       return res.status(401).json({

@@ -85,29 +85,23 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Short-circuit API requests when Supabase key is invalid to provide clearer errors
+// Keep requests flowing even when health checks are noisy.
+// Routes are responsible for handling their own Supabase errors.
 app.use((req, res, next) => {
   try {
-    // If the Supabase client failed key validation at startup, short-circuit.
-    if (supabase && typeof supabase.checkKeyValid === 'function' && !supabase.checkKeyValid()) {
-      return res.status(503).json({
-        success: false,
-        message: 'Service temporarily unavailable: Supabase API key invalid or unregistered. Please check server environment variables.'
-      });
-    }
-
-    // If the Supabase health monitor reports the system is unhealthy, return 503
     if (typeof supabaseHealthMonitor !== 'undefined' && typeof supabaseHealthMonitor.getStatus === 'function') {
       const status = supabaseHealthMonitor.getStatus();
-      if (!status.healthy) {
-        return res.status(503).json({
-          success: false,
-          message: 'Service temporarily unavailable: Supabase services degraded or unavailable. Please try again later.'
+      const dbHealthy = status?.services?.database?.healthy;
+      if (dbHealthy === false && req.path.startsWith('/api/health')) {
+        return res.status(200).json({
+          success: true,
+          message: 'Health monitoring is degraded but the API remains available.',
+          services: status.services
         });
       }
     }
   } catch (e) {
-    // If any unexpected error, continue to routes and let existing error handlers manage it
+    // Ignore monitor issues and continue to routes.
   }
   next();
 });

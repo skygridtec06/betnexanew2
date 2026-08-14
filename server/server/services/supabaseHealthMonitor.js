@@ -134,11 +134,10 @@ class SupabaseHealthMonitor {
         }
       }
 
-      // Test database with timeout
+      // Test database with a simple query (avoid unsupported .timeout() on this Supabase client)
       const { data, error } = await supabase
         .from('users')
-        .select('count', { count: 'exact', head: true })
-        .timeout(3000);
+        .select('count', { count: 'exact', head: true });
 
       const responseTime = Date.now() - startTime;
       this.services[service].responseTime = responseTime;
@@ -192,16 +191,16 @@ class SupabaseHealthMonitor {
       }
 
       // Test PostREST API endpoint
-      const response = await fetch(
+      const response = await this.abortableFetch(
         `${this.supabaseUrl}/rest/v1/users?select=id&limit=1`,
         {
           headers: { 
             'Authorization': `Bearer ${this.supabaseAnonKey}`,
             'apikey': this.supabaseAnonKey,
             'Content-Type': 'application/json'
-          },
-          timeout: 3000
-        }
+          }
+        },
+        3000
       );
 
       const responseTime = Date.now() - startTime;
@@ -249,15 +248,15 @@ class SupabaseHealthMonitor {
       }
 
       // Test Auth service via metadata endpoint
-      const response = await fetch(
+      const response = await this.abortableFetch(
         `${this.supabaseUrl}/auth/v1/settings`,
         {
           headers: {
             'apikey': this.supabaseAnonKey,
             'Content-Type': 'application/json'
-          },
-          timeout: 3000
-        }
+          }
+        },
+        3000
       );
 
       const responseTime = Date.now() - startTime;
@@ -305,15 +304,15 @@ class SupabaseHealthMonitor {
       }
 
       // Test Storage via list buckets endpoint
-      const response = await fetch(
+      const response = await this.abortableFetch(
         `${this.supabaseUrl}/storage/v1/bucket`,
         {
           headers: {
             'Authorization': `Bearer ${this.supabaseAnonKey}`,
             'apikey': this.supabaseAnonKey
-          },
-          timeout: 3000
-        }
+          }
+        },
+        3000
       );
 
       const responseTime = Date.now() - startTime;
@@ -361,14 +360,14 @@ class SupabaseHealthMonitor {
       }
 
       // Test Realtime server availability
-      const response = await fetch(
+      const response = await this.abortableFetch(
         `${this.supabaseUrl}/realtime/v1/connections`,
         {
           headers: {
             'apikey': this.supabaseAnonKey
-          },
-          timeout: 3000
-        }
+          }
+        },
+        3000
       );
 
       const responseTime = Date.now() - startTime;
@@ -417,15 +416,15 @@ class SupabaseHealthMonitor {
       }
 
       // Test Edge Functions API availability
-      const response = await fetch(
+      const response = await this.abortableFetch(
         `${this.supabaseUrl}/functions/v1/health`,
         {
           headers: {
             'Authorization': `Bearer ${this.supabaseAnonKey}`,
             'apikey': this.supabaseAnonKey
-          },
-          timeout: 3000
-        }
+          }
+        },
+        3000
       );
 
       const responseTime = Date.now() - startTime;

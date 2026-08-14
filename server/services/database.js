@@ -8,8 +8,8 @@ const { createClient } = require('@supabase/supabase-js');
 const supabaseUrl = process.env.SUPABASE_URL || 'https://eaqogmybihiqzivuwyav.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
-const supabaseKeyType = supabaseServiceKey ? 'SERVICE_KEY' : (supabaseAnonKey ? 'ANON_KEY' : 'NO_KEY');
-const supabaseKey = supabaseAnonKey || supabaseServiceKey;
+let supabaseKeyType = supabaseServiceKey ? 'SERVICE_KEY' : (supabaseAnonKey ? 'ANON_KEY' : 'NO_KEY');
+let supabaseKey = supabaseServiceKey || supabaseAnonKey;
 
 console.log('🔧 Database initialization:');
 console.log('   SUPABASE_URL:', supabaseUrl ? '✓ configured' : '❌ missing');
@@ -25,23 +25,29 @@ if (!supabaseUrl || !supabaseKey) {
 
 let supabase = null;
 
+function createSupabaseClient(key, headers = {}) {
+  return createClient(supabaseUrl, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { 'x-connection-pool': 'true', ...headers } },
+    db: { schema: 'public' }
+  });
+}
+
+function setSupabaseClient(client, valid = true) {
+  supabase = client;
+  supabase.__isKeyValid = valid;
+  return supabase;
+}
+
 try {
-  const globalHeaders = {
-    'x-connection-pool': 'true'
-  };
+  const globalHeaders = {};
 
   if (supabaseServiceKey && supabaseAnonKey) {
     globalHeaders.Authorization = `Bearer ${supabaseServiceKey}`;
     globalHeaders.apikey = supabaseAnonKey;
   }
 
-  supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    global: {
-      headers: globalHeaders
-    },
-    db: { schema: 'public' }
-  });
+  setSupabaseClient(createSupabaseClient(supabaseKey, globalHeaders), true);
   console.log('✅ Supabase client initialized successfully');
   
   // Test connection immediately with better error diagnostics
@@ -61,7 +67,8 @@ try {
 
         // Detect common Supabase key issues and mark client as invalid
         const msg = (error.message || '').toLowerCase();
-        if (msg.includes('unregistered api key') || msg.includes('invalid api key') || msg.includes('permission denied')) {
+        const isInvalidKey = msg.includes('unregistered api key') || msg.includes('invalid api key') || msg.includes('permission denied') || error.status === 401 || error.status === 403;
+        if (isInvalidKey) {
           supabase.__isKeyValid = false;
           console.error('\n🚨 Supabase API key appears to be invalid or unregistered.');
           console.error('   Please check SUPABASE_SERVICE_KEY / SUPABASE_ANON_KEY in your environment or .env file.');
@@ -71,14 +78,7 @@ try {
             console.warn('⚠️ Service key validation failed. Falling back to SUPABASE_ANON_KEY for read-only operations.');
             supabaseKey = supabaseAnonKey;
             supabaseKeyType = 'ANON_KEY';
-            supabase = createClient(supabaseUrl, supabaseKey, {
-              auth: { persistSession: false, autoRefreshToken: false },
-              global: {
-                headers: { 'x-connection-pool': 'true' },
-                fetch: (url, options) => fetch(url, { ...options, keepalive: true }),
-              },
-              db: { schema: 'public' },
-            });
+            setSupabaseClient(createSupabaseClient(supabaseKey, { 'x-connection-pool': 'true' }), true);
             console.log('✅ Fallen back to SUPABASE_ANON_KEY');
             supabase.__isKeyValid = true;
           }
