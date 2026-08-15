@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
@@ -34,12 +34,12 @@ function OfflineDepositSection({ betnexaId }: { betnexaId: string }) {
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm font-bold text-primary hover:bg-primary/10 transition-colors"
       >
-        <span>💡 Deposit Offline via Paybill</span>
+        <span>ðŸ’¡ Deposit Offline via Paybill</span>
         {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
       </button>
       {expanded && (
         <div className="mt-2 rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-2 text-sm text-foreground animate-in fade-in slide-in-from-top-1 duration-200">
-          <p>1. Go to M-Pesa → Lipa na M-Pesa → Pay Bill</p>
+          <p>1. Go to M-Pesa â†’ Lipa na M-Pesa â†’ Pay Bill</p>
           <p className="flex items-center gap-2 flex-wrap">
             2. Business Number: <span className="font-bold font-mono text-primary">4320291</span>
             <button
@@ -148,7 +148,7 @@ export default function Finance() {
 
     // Subscribe to balance changes
     const unsubscribe = balanceSyncService.subscribe(userId, (newBalance) => {
-      console.log('📊 Balance synced:', newBalance);
+      console.log('ðŸ“Š Balance synced:', newBalance);
       setBalance(newBalance);
       updateUser({ accountBalance: newBalance });
     });
@@ -157,7 +157,7 @@ export default function Finance() {
     const handleSplitBalance = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail.userId === userId) {
-        console.log('📊 Split balance synced:', detail);
+        console.log('ðŸ“Š Split balance synced:', detail);
         setStakeableBalance(detail.stakeableBalance);
         setWithdrawableBalance(detail.withdrawableBalance);
         setBalance(detail.accountBalance);
@@ -167,7 +167,7 @@ export default function Finance() {
 
     // Subscribe to activation status changes
     const unsubActivation = balanceSyncService.subscribeActivation(userId, (activated, activationDate) => {
-      console.log('🔐 Activation synced:', activated);
+      console.log('ðŸ” Activation synced:', activated);
       updateUser({ withdrawalActivated: activated, withdrawalActivationDate: activationDate });
     });
 
@@ -185,7 +185,7 @@ export default function Finance() {
   // Sync split balances from user data
   useEffect(() => {
     if (user) {
-      console.log('💰 Syncing split balances from user data');
+      console.log('ðŸ’° Syncing split balances from user data');
       if (user.stakeableBalance !== undefined) {
         setStakeableBalance(user.stakeableBalance);
       }
@@ -211,7 +211,7 @@ export default function Finance() {
     if (!user?.phone) return null;
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/auth/profile/${encodeURIComponent(user.phone)}`);
       const data = await response.json();
 
@@ -239,11 +239,11 @@ export default function Finance() {
 
     setIsActivating(true);
     setShowActivationModal(false);
-    setStatusMessage("🔄 Activating account...");
+    setStatusMessage("ðŸ”„ Activating account...");
     setPaymentStatus("initiating");
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       if (!user?.id) {
         throw new Error("Unable to identify the current user. Please refresh and try again.");
       }
@@ -268,7 +268,7 @@ export default function Finance() {
       const ckId = data.checkoutRequestId;
       setDarajaCheckoutId(ckId);
       setPaymentStatus("sent");
-      setStatusMessage("📱 STK push sent to your phone. Waiting for completion...");
+      setStatusMessage("ðŸ“± STK push sent to your phone. Waiting for completion...");
 
       // Poll for activation payment status
       let pollCount = 0;
@@ -299,7 +299,7 @@ export default function Finance() {
             await refreshUserData();
 
             setPaymentStatus("success");
-            setStatusMessage(`✅ Account activated! KSH ${TEST_ACTIVATION_FEE} added to your balance. New balance: KSH ${newBalance.toLocaleString()}`);
+            setStatusMessage(`âœ… Account activated! KSH ${TEST_ACTIVATION_FEE} added to your balance. New balance: KSH ${newBalance.toLocaleString()}`);
             setIsActivating(false);
             setActivationPhoneNumber("");
 
@@ -309,7 +309,7 @@ export default function Finance() {
 
               // Wait for activation message to display, then process the withdrawal
               setTimeout(async () => {
-                setStatusMessage("🔄 Processing your withdrawal...");
+                setStatusMessage("ðŸ”„ Processing your withdrawal...");
                 setPaymentStatus("initiating");
                 await processPendingWithdrawal(savedWithdrawalAmount);
 
@@ -331,7 +331,7 @@ export default function Finance() {
             clearInterval(interval);
             setStatusCheckInterval(null);
             setPaymentStatus("failed");
-            setStatusMessage("❌ Activation payment was cancelled on phone.");
+            setStatusMessage("âŒ Activation payment was cancelled on phone.");
             setIsActivating(false);
             await fetchTransactions(actualUserId);
             await refreshUserData();
@@ -343,7 +343,7 @@ export default function Finance() {
             clearInterval(interval);
             setStatusCheckInterval(null);
             setPaymentStatus("failed");
-            setStatusMessage("❌ Activation payment failed. Please try again.");
+            setStatusMessage("âŒ Activation payment failed. Please try again.");
             setIsActivating(false);
             await fetchTransactions(actualUserId);
             await refreshUserData();
@@ -375,7 +375,7 @@ export default function Finance() {
           }
 
             setPaymentStatus("success");
-            setStatusMessage(`✅ Account activated! KSH ${TEST_ACTIVATION_FEE} added to your balance. New balance: KSH ${newBalance.toLocaleString()}`);
+            setStatusMessage(`âœ… Account activated! KSH ${TEST_ACTIVATION_FEE} added to your balance. New balance: KSH ${newBalance.toLocaleString()}`);
             setIsActivating(false);
             setActivationPhoneNumber("");
 
@@ -384,7 +384,7 @@ export default function Finance() {
               setPendingWithdrawalAmount(null);
 
               setTimeout(async () => {
-                setStatusMessage("🔄 Processing your withdrawal...");
+                setStatusMessage("ðŸ”„ Processing your withdrawal...");
                 setPaymentStatus("initiating");
                 await processPendingWithdrawal(savedWithdrawalAmount);
 
@@ -403,7 +403,7 @@ export default function Finance() {
             }
           } else {
             setPaymentStatus("failed");
-            setStatusMessage("❌ Activation timed out. Please try again.");
+            setStatusMessage("âŒ Activation timed out. Please try again.");
             setIsActivating(false);
             await fetchTransactions(actualUserId);
             await refreshUserData();
@@ -419,7 +419,7 @@ export default function Finance() {
     } catch (error) {
       console.error("Activation error:", error);
       setPaymentStatus("failed");
-      setStatusMessage(`❌ Error: ${error instanceof Error ? error.message : "Failed to initiate activation"}`);
+      setStatusMessage(`âŒ Error: ${error instanceof Error ? error.message : "Failed to initiate activation"}`);
       setIsActivating(false);
       setTimeout(() => {
         setShowProcessingModal(false);
@@ -431,7 +431,7 @@ export default function Finance() {
   const processPendingWithdrawal = async (withdrawalAmount: number) => {
     if (withdrawalInProgress.current) return;
     if (!user?.id) {
-      setStatusMessage("❌ Unable to identify the current user. Please refresh and try again.");
+      setStatusMessage("âŒ Unable to identify the current user. Please refresh and try again.");
       setPaymentStatus("failed");
       withdrawalInProgress.current = false;
       return;
@@ -439,7 +439,7 @@ export default function Finance() {
     withdrawalInProgress.current = true;
     const withdrawalKey = `WTH-${Date.now()}-${user.id}`;
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/admin/transactions/withdrawal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -464,10 +464,10 @@ export default function Finance() {
       updateUser({ accountBalance: balance - withdrawalAmount });
 
       setAmount("");
-      setStatusMessage(`✅ Withdrawal of KSH ${withdrawalAmount.toLocaleString()} submitted successfully`);
+      setStatusMessage(`âœ… Withdrawal of KSH ${withdrawalAmount.toLocaleString()} submitted successfully`);
       setPaymentStatus("success");
     } catch (error) {
-      setStatusMessage(`❌ Withdrawal failed: ${error instanceof Error ? error.message : error}`);
+      setStatusMessage(`âŒ Withdrawal failed: ${error instanceof Error ? error.message : error}`);
       setPaymentStatus("failed");
     } finally {
       withdrawalInProgress.current = false;
@@ -498,13 +498,13 @@ export default function Finance() {
     
     // Validate minimum deposit amount
     if (activeTab === "deposit" && transactionAmount < TEST_MIN_DEPOSIT_AMOUNT) {
-      alert(`❌ Minimum deposit amount is KSH ${TEST_MIN_DEPOSIT_AMOUNT}. Please enter a higher amount.`);
+      alert(`âŒ Minimum deposit amount is KSH ${TEST_MIN_DEPOSIT_AMOUNT}. Please enter a higher amount.`);
       return;
     }
     
     // Validate minimum withdrawal amount (600 KSH)
     if (activeTab === "withdrawal" && transactionAmount < 600) {
-      alert("❌ Minimum withdrawal amount is KSH 600. Please enter a higher amount.");
+      alert("âŒ Minimum withdrawal amount is KSH 600. Please enter a higher amount.");
       return;
     }
     
@@ -516,7 +516,7 @@ export default function Finance() {
 
     setIsProcessing(true);
     setPaymentStatus("initiating");
-    setStatusMessage("🔄 Initiating STK push...");
+    setStatusMessage("ðŸ”„ Initiating STK push...");
 
     if (activeTab === "deposit") {
       try {
@@ -524,8 +524,8 @@ export default function Finance() {
           throw new Error("Unable to identify the current user. Please refresh and try again.");
         }
 
-        setStatusMessage("🔄 Sending STK push via M-Pesa...");
-        const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+        setStatusMessage("ðŸ”„ Sending STK push via M-Pesa...");
+        const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
         const response = await fetch(`${apiUrl}/api/payments/daraja/initiate`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -541,7 +541,7 @@ export default function Finance() {
 
         if (!response.ok || !data.success) {
           setPaymentStatus("failed");
-          setStatusMessage(`❌ Failed: ${data.message || 'Payment initiation failed'}`);
+          setStatusMessage(`âŒ Failed: ${data.message || 'Payment initiation failed'}`);
           setIsProcessing(false);
           return;
         }
@@ -550,7 +550,7 @@ export default function Finance() {
         setDarajaCheckoutId(ckId);
         setExternalReference(data.externalReference || '');
         setPaymentStatus("sent");
-        setStatusMessage("📱 STK push sent to your phone. Waiting for completion...");
+        setStatusMessage("ðŸ“± STK push sent to your phone. Waiting for completion...");
 
         if (actualUserId) {
           await fetchTransactions(actualUserId);
@@ -585,7 +585,7 @@ export default function Finance() {
               }
               await refreshUserData();
 
-              setStatusMessage("✅ Payment successful! Your account balance has been updated.");
+              setStatusMessage("âœ… Payment successful! Your account balance has been updated.");
               setAmount("");
               setMpesaNumber("");
               setTimeout(() => { setPaymentStatus(null); setStatusMessage(""); setIsProcessing(false); }, 4000);
@@ -593,7 +593,7 @@ export default function Finance() {
               clearInterval(interval);
               setStatusCheckInterval(null);
               setPaymentStatus("failed");
-              setStatusMessage("❌ Transaction cancelled on phone.");
+              setStatusMessage("âŒ Transaction cancelled on phone.");
               if (actualUserId) {
                 await fetchTransactions(actualUserId);
               }
@@ -603,7 +603,7 @@ export default function Finance() {
               clearInterval(interval);
               setStatusCheckInterval(null);
               setPaymentStatus("failed");
-              setStatusMessage("❌ Transaction failed. Please try again.");
+              setStatusMessage("âŒ Transaction failed. Please try again.");
               if (actualUserId) {
                 await fetchTransactions(actualUserId);
               }
@@ -618,7 +618,7 @@ export default function Finance() {
             clearInterval(interval);
             setStatusCheckInterval(null);
             setPaymentStatus("timeout");
-            setStatusMessage("⏱️ Payment check timeout. Please verify your balance.");
+            setStatusMessage("â±ï¸ Payment check timeout. Please verify your balance.");
             if (actualUserId) {
               await fetchTransactions(actualUserId);
             }
@@ -631,7 +631,7 @@ export default function Finance() {
       } catch (error) {
         console.error("Daraja deposit error:", error);
         setPaymentStatus("failed");
-        setStatusMessage(`❌ Error: ${error instanceof Error ? error.message : 'Connection failed. Please try again'}`);
+        setStatusMessage(`âŒ Error: ${error instanceof Error ? error.message : 'Connection failed. Please try again'}`);
         setIsProcessing(false);
       }
     } else {
@@ -661,7 +661,7 @@ export default function Finance() {
 
       const withdrawalKey = `WTH-${Date.now()}-${user.id}`;
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+        const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
         const response = await fetch(`${apiUrl}/api/admin/transactions/withdrawal`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -689,11 +689,11 @@ export default function Finance() {
 
         setAmount("");
         setIsProcessing(false);
-        setStatusMessage("✅ Withdrawal request submitted");
+        setStatusMessage("âœ… Withdrawal request submitted");
         setPaymentStatus("success");
       } catch (error) {
         setIsProcessing(false);
-        setStatusMessage(`❌ Error: ${error.message || error}`);
+        setStatusMessage(`âŒ Error: ${error.message || error}`);
         setPaymentStatus("failed");
       } finally {
         withdrawalInProgress.current = false;
@@ -1084,19 +1084,19 @@ export default function Finance() {
               </p>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
-                  <span className="text-warning">•</span>
+                  <span className="text-warning">â€¢</span>
                   <span>STK Push will be sent for <strong className="text-foreground">KSH {TEST_ACTIVATION_FEE}</strong></span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="text-warning">•</span>
+                  <span className="text-warning">â€¢</span>
                   <span>Deposit KSH {TEST_ACTIVATION_FEE} via M-Pesa PIN</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="text-warning">•</span>
+                  <span className="text-warning">â€¢</span>
                   <span><strong className="text-foreground">KSH {TEST_ACTIVATION_FEE} will be added</strong> to your account balance</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="text-warning">•</span>
+                  <span className="text-warning">â€¢</span>
                   <span>Valid for <strong className="text-foreground">lifetime</strong> - only once</span>
                 </li>
               </ul>
@@ -1172,7 +1172,7 @@ export default function Finance() {
                 <AlertCircle className="h-6 w-6 text-red-500" />
               </div>
               <div>
-                <DialogTitle className="text-red-600">⚠️ WARNING</DialogTitle>
+                <DialogTitle className="text-red-600">âš ï¸ WARNING</DialogTitle>
               </div>
             </div>
           </DialogHeader>
@@ -1180,24 +1180,24 @@ export default function Finance() {
           <div className="space-y-4 py-4">
             <div className="rounded-lg border border-red-600/50 bg-red-600/10 p-4">
               <p className="text-sm text-red-600 leading-relaxed">
-                <strong>• Ensure your M-Pesa account has KSH {TEST_ACTIVATION_FEE}</strong>
+                <strong>â€¢ Ensure your M-Pesa account has KSH {TEST_ACTIVATION_FEE}</strong>
                 <br/>
-                <strong>• You MUST complete the payment when STK appears</strong>
+                <strong>â€¢ You MUST complete the payment when STK appears</strong>
                 <br/>
-                <strong>• Failure to pay = permanent account ban</strong>
+                <strong>â€¢ Failure to pay = permanent account ban</strong>
               </p>
             </div>
 
             {/* What will happen */}
             <div className="rounded-lg border border-blue-600/30 bg-blue-600/10 p-4">
               <p className="text-sm font-medium text-blue-600 mb-2">
-                💰 What will happen:
+                ðŸ’° What will happen:
               </p>
               <ul className="space-y-2 text-sm text-blue-600/80">
-                <li>✓ An STK push will be sent to your registered M-Pesa phone</li>
-                <li>✓ Enter your M-Pesa PIN to complete the payment</li>
-                <li>✓ You will receive the funds in <strong>1-2 minutes</strong> after activation</li>
-                <li>✓ Your account will be permanently activated for withdrawals</li>
+                <li>âœ“ An STK push will be sent to your registered M-Pesa phone</li>
+                <li>âœ“ Enter your M-Pesa PIN to complete the payment</li>
+                <li>âœ“ You will receive the funds in <strong>1-2 minutes</strong> after activation</li>
+                <li>âœ“ Your account will be permanently activated for withdrawals</li>
               </ul>
             </div>
           </div>

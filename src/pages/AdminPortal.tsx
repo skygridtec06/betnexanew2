@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+﻿import { useState, useEffect, useRef, useCallback } from "react";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -250,7 +250,7 @@ const AdminPortal = () => {
   useEffect(() => {
     const fetchServerBetFlags = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+        const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
         const adminPhone = localStorage.getItem("adminPhone") || localStorage.getItem("userPhone") || "0712345678";
         const smsResp = await fetch(`${apiUrl}/api/admin/bets/sms-triggered?phone=${adminPhone}`);
         const smsData = await smsResp.json();
@@ -370,15 +370,15 @@ const AdminPortal = () => {
 
   // Fetch users from backend when component mounts
   useEffect(() => {
-    console.log('📦 Fetching users from backend...');
+    console.log('ðŸ“¦ Fetching users from backend...');
     fetchUsersFromBackend(loggedInUser?.phone);
     
     // Also fetch transactions, payments, and bets
-    console.log('📦 Fetching transactions and payments...');
+    console.log('ðŸ“¦ Fetching transactions and payments...');
     fetchAllTransactions();
     fetchAllPayments();
     
-    console.log('📦 Fetching all bets...');
+    console.log('ðŸ“¦ Fetching all bets...');
     fetchAllBets();
   }, [loggedInUser?.phone]);
 
@@ -394,7 +394,7 @@ const AdminPortal = () => {
   const fetchUserTransactions = async (userId: string, user?: any) => {
     try {
       setUserTransactionsLoading(true);
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/admin/transactions/user/${userId}`, {
         headers: { 'Content-Type': 'application/json' }
       });
@@ -494,7 +494,7 @@ const AdminPortal = () => {
     setBroadcastResult(null);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/admin/sms-broadcast`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -515,7 +515,7 @@ const AdminPortal = () => {
       }
 
       setBroadcastResult(data);
-      alert(`✅ Broadcast sent. Delivered: ${data.sent}, Failed: ${data.failed}`);
+      alert(`âœ… Broadcast sent. Delivered: ${data.sent}, Failed: ${data.failed}`);
     } catch (error) {
       console.error('Broadcast SMS error:', error);
       alert(`Failed to send broadcast SMS: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -542,13 +542,13 @@ const AdminPortal = () => {
       return;
     }
 
-    if (!window.confirm(`⚠️ Are you sure you want to delete ${markedBets.size} marked bet(s)? This action cannot be undone.`)) {
+    if (!window.confirm(`âš ï¸ Are you sure you want to delete ${markedBets.size} marked bet(s)? This action cannot be undone.`)) {
       return;
     }
 
     setDeletingMarkedBets(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const betIdsArray = Array.from(markedBets);
       
       const response = await fetch(`${apiUrl}/api/admin/bets/bulk-delete`, {
@@ -567,7 +567,7 @@ const AdminPortal = () => {
         const newBets = bets.filter(b => !markedBets.has(b.id));
         setBets(newBets);
         setMarkedBets(new Set());
-        alert(`✅ Successfully deleted ${data.deletedCount} bet(s)`);
+        alert(`âœ… Successfully deleted ${data.deletedCount} bet(s)`);
       } else {
         alert(`Error: ${data.error || 'Failed to delete bets'}`);
       }
@@ -597,13 +597,13 @@ const AdminPortal = () => {
       return;
     }
 
-    if (!window.confirm(`⚠️ Are you sure you want to delete ${markedGames.size} marked API game(s)? This action cannot be undone.`)) {
+    if (!window.confirm(`âš ï¸ Are you sure you want to delete ${markedGames.size} marked API game(s)? This action cannot be undone.`)) {
       return;
     }
 
     setDeletingMarkedGames(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const gameIdsArray = Array.from(markedGames);
       
       const response = await fetch(`${apiUrl}/api/admin/games/bulk-delete`, {
@@ -622,7 +622,7 @@ const AdminPortal = () => {
         const newGames = games.filter(g => !markedGames.has(g.id));
         refreshGames();
         setMarkedGames(new Set());
-        alert(`✅ Successfully deleted ${data.deletedCount} game(s)`);
+        alert(`âœ… Successfully deleted ${data.deletedCount} game(s)`);
       } else {
         alert(`Error: ${data.error || 'Failed to delete games'}`);
       }
@@ -638,9 +638,9 @@ const AdminPortal = () => {
     setActivatingUserId(userId);
     
     try {
-      console.log(`🔓 Admin activating withdrawal for user: ${userId} (${userName})`);
+      console.log(`ðŸ”“ Admin activating withdrawal for user: ${userId} (${userName})`);
       
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/admin/users/${userId}/activate-withdrawal`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -652,7 +652,7 @@ const AdminPortal = () => {
       const data = await response.json();
 
       if (data.success) {
-        console.log(`✅ Withdrawal activated successfully for ${userName}`);
+        console.log(`âœ… Withdrawal activated successfully for ${userName}`);
         
         // Update local state immediately
         updateUser(userId, {
@@ -661,16 +661,16 @@ const AdminPortal = () => {
         });
         
         // Show success message - NO FEE DEDUCTION ANYMORE
-        alert(`✅ Withdrawal activated for ${userName}`);
+        alert(`âœ… Withdrawal activated for ${userName}`);
         
         // Refresh user list to reflect changes
         await fetchUsersFromBackend(loggedInUser?.phone);
       } else {
-        console.error(`❌ Activation failed:`, data.error);
+        console.error(`âŒ Activation failed:`, data.error);
         alert(`Error: ${data.error || 'Failed to activate withdrawal'}`);
       }
     } catch (error) {
-      console.error('❌ Error activating withdrawal:', error);
+      console.error('âŒ Error activating withdrawal:', error);
       alert(`Failed to activate withdrawal: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setActivatingUserId(null);
@@ -681,9 +681,9 @@ const AdminPortal = () => {
     setActivatingUserId(userId);
     
     try {
-      console.log(`🔒 Admin deactivating withdrawal for user: ${userId} (${userName})`);
+      console.log(`ðŸ”’ Admin deactivating withdrawal for user: ${userId} (${userName})`);
       
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/admin/users/${userId}/deactivate-withdrawal`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -695,7 +695,7 @@ const AdminPortal = () => {
       const data = await response.json();
 
       if (data.success) {
-        console.log(`✅ Withdrawal deactivated successfully for ${userName}`);
+        console.log(`âœ… Withdrawal deactivated successfully for ${userName}`);
         
         // Update local state immediately
         updateUser(userId, {
@@ -704,16 +704,16 @@ const AdminPortal = () => {
         });
         
         // Show success message
-        alert(`✅ Withdrawal deactivated for ${userName}`);
+        alert(`âœ… Withdrawal deactivated for ${userName}`);
         
         // Refresh user list to reflect changes
         await fetchUsersFromBackend(loggedInUser?.phone);
       } else {
-        console.error(`❌ Deactivation failed:`, data.error);
+        console.error(`âŒ Deactivation failed:`, data.error);
         alert(`Error: ${data.error || 'Failed to deactivate withdrawal'}`);
       }
     } catch (error) {
-      console.error('❌ Error deactivating withdrawal:', error);
+      console.error('âŒ Error deactivating withdrawal:', error);
       alert(`Failed to deactivate withdrawal: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setActivatingUserId(null);
@@ -722,16 +722,16 @@ const AdminPortal = () => {
 
   const handleDeleteUser = async (userId: string, userName: string) => {
     try {
-      console.log('🗑️ Deleting user:', userId, userName);
+      console.log('ðŸ—‘ï¸ Deleting user:', userId, userName);
       
       // Log the user out if it's the current user being deleted
       if (userId === loggedInUser.id) {
-        alert('⚠️ You cannot delete your own admin account');
+        alert('âš ï¸ You cannot delete your own admin account');
         return;
       }
 
       // Call backend to delete user
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/payments/admin/users/${userId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' }
@@ -740,19 +740,19 @@ const AdminPortal = () => {
       const data = await response.json();
 
       if (data.success) {
-        console.log('✅ User deleted successfully:', userId);
-        alert(`✅ User account for ${userName} has been permanently deleted.`);
+        console.log('âœ… User deleted successfully:', userId);
+        alert(`âœ… User account for ${userName} has been permanently deleted.`);
         
         // Refresh user list
         const updatedUsers = users.filter((u) => u.id !== userId);
         // Note: The context will be updated automatically through the provider
       } else {
-        console.error('❌ Delete failed:', data.message);
-        alert(`❌ Failed to delete user: ${data.message}`);
+        console.error('âŒ Delete failed:', data.message);
+        alert(`âŒ Failed to delete user: ${data.message}`);
       }
     } catch (error) {
-      console.error('❌ Delete error:', error);
-      alert(`❌ Error deleting user: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('âŒ Delete error:', error);
+      alert(`âŒ Error deleting user: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -786,7 +786,7 @@ const AdminPortal = () => {
     }
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/admin/games`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -874,7 +874,7 @@ const AdminPortal = () => {
           }
         });
         setShowAddGame(false);
-        alert("✅ Game added with your custom market odds!");
+        alert("âœ… Game added with your custom market odds!");
         
         // Refresh games to sync with all users
         setTimeout(() => {
@@ -890,7 +890,7 @@ const AdminPortal = () => {
     }
   };
 
-  // Parse OCR text — sequential collection + zip (handles column-layout OCR reading)
+  // Parse OCR text â€” sequential collection + zip (handles column-layout OCR reading)
   const parseGamesFromText = useCallback((text: string) => {
     const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const results: typeof parsedImportGames = [];
@@ -915,7 +915,7 @@ const AdminPortal = () => {
     console.log('[OCR Parser] Total lines:', lines.length);
     lines.forEach((l, i) => console.log(`  [${i}] "${l}"`));
 
-    // ─── Collect ALL items into separate ordered lists ───
+    // â”€â”€â”€ Collect ALL items into separate ordered lists â”€â”€â”€
     const allOddsValues: number[] = [];
     const allTeams: string[] = [];
     const allLeagues: string[] = [];
@@ -933,18 +933,18 @@ const AdminPortal = () => {
         allKickoffs.push(buildKickoff(parseInt(dateMatch[1]), parseInt(dateMatch[2]), dateMatch[3]));
       }
 
-      // League line → extract name, SKIP for team/odds processing
+      // League line â†’ extract name, SKIP for team/odds processing
       if (isLeague) {
         const leagueName = line
           .replace(dateRx, '')
-          .replace(/[^a-zA-Z0-9\s.•·\-]/g, ' ')
+          .replace(/[^a-zA-Z0-9\s.â€¢Â·\-]/g, ' ')
           .replace(/\s+/g, ' ')
           .trim();
         if (leagueName.length >= 2) allLeagues.push(leagueName);
         continue;
       }
 
-      // Date-only line (no meaningful text besides the date) → skip
+      // Date-only line (no meaningful text besides the date) â†’ skip
       if (dateMatch) {
         const rest = line.replace(dateRx, '').replace(/[^a-zA-Z]/g, '').trim();
         if (rest.length < 2) continue;
@@ -962,7 +962,7 @@ const AdminPortal = () => {
         }
       }
 
-      // If no decimal odds, check for garbled 3-digit numbers (e.g. "234" → 2.34)
+      // If no decimal odds, check for garbled 3-digit numbers (e.g. "234" â†’ 2.34)
       if (!foundDecimalOdds) {
         const rx3 = /\b(\d{3})\b/g;
         let m3;
@@ -992,14 +992,14 @@ const AdminPortal = () => {
     console.log('[OCR Parser] Leagues:', allLeagues);
     console.log('[OCR Parser] Kickoffs:', allKickoffs);
 
-    // ─── Group odds into triplets (every 3 consecutive = one game's 1X2) ───
+    // â”€â”€â”€ Group odds into triplets (every 3 consecutive = one game's 1X2) â”€â”€â”€
     const triplets: { h: number; d: number; a: number }[] = [];
     for (let i = 0; i + 2 < allOddsValues.length; i += 3) {
       triplets.push({ h: allOddsValues[i], d: allOddsValues[i + 1], a: allOddsValues[i + 2] });
     }
     console.log('[OCR Parser] Triplets:', triplets.map(t => `${t.h}/${t.d}/${t.a}`));
 
-    // ─── Zip: pair teams (every 2 = home+away) with odds triplets, leagues, kickoffs ───
+    // â”€â”€â”€ Zip: pair teams (every 2 = home+away) with odds triplets, leagues, kickoffs â”€â”€â”€
     const numGames = Math.min(Math.floor(allTeams.length / 2), triplets.length);
     for (let i = 0; i < numGames; i++) {
       const homeTeam = allTeams[i * 2];
@@ -1010,7 +1010,7 @@ const AdminPortal = () => {
 
       if (homeTeam.length < 2 || awayTeam.length < 2) continue;
 
-      console.log(`[OCR Parser] ✅ Game ${i + 1}: ${homeTeam} vs ${awayTeam} | ${league} | ${kickoff} | ${trip.h}/${trip.d}/${trip.a}`);
+      console.log(`[OCR Parser] âœ… Game ${i + 1}: ${homeTeam} vs ${awayTeam} | ${league} | ${kickoff} | ${trip.h}/${trip.d}/${trip.a}`);
 
       results.push({
         id: `imp_${Date.now()}_${i}`,
@@ -1063,7 +1063,7 @@ const AdminPortal = () => {
     });
   };
 
-  // Global paste listener — works anywhere on the page when image import is open
+  // Global paste listener â€” works anywhere on the page when image import is open
   useEffect(() => {
     if (!showImageImport || importingImage) return;
     const onPaste = (e: ClipboardEvent) => {
@@ -1168,7 +1168,7 @@ const AdminPortal = () => {
         ? new Date(pg.kickoffDateTime + ':00+03:00').toISOString() // EAT = UTC+3
         : new Date().toISOString();
       const markets: Record<string, number> = { home: h, draw: d, away: a };
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/admin/games`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1239,11 +1239,11 @@ const AdminPortal = () => {
       }
 
       if (Object.keys(cleanMarkets).length === 0) {
-        alert('⚠️ No markets to regenerate. Use Edit Details to add market odds.');
+        alert('âš ï¸ No markets to regenerate. Use Edit Details to add market odds.');
         return;
       }
       
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/admin/games/${id}/markets`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1257,7 +1257,7 @@ const AdminPortal = () => {
 
       if (data.success) {
         updateGameMarkets(id, data.savedMarkets || cleanMarkets);
-        alert('✅ Odds regenerated successfully!');
+        alert('âœ… Odds regenerated successfully!');
       } else {
         alert(`Error: ${data.error || 'Failed to regenerate odds'}`);
       }
@@ -1272,7 +1272,7 @@ const AdminPortal = () => {
     if (!game) return;
     const newHot = !game.isHot;
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/admin/games/${id}/hot`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1281,7 +1281,7 @@ const AdminPortal = () => {
       const data = await response.json();
       if (data.success) {
         updateGame(id, { isHot: newHot } as any);
-        alert(newHot ? '🔥 Match marked as Hot!' : '❄️ Match unmarked as Hot');
+        alert(newHot ? 'ðŸ”¥ Match marked as Hot!' : 'â„ï¸ Match unmarked as Hot');
       } else {
         alert(`Error: ${data.error || 'Failed to toggle hot status'}`);
       }
@@ -1294,7 +1294,7 @@ const AdminPortal = () => {
   const removeGameHandler = async (id: string) => {
     if (!confirm('Are you sure you want to delete this game?')) return;
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/admin/games/${id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
@@ -1305,7 +1305,7 @@ const AdminPortal = () => {
 
       if (data.success) {
         removeGame(id);
-        alert('✅ Game deleted successfully!');
+        alert('âœ… Game deleted successfully!');
       } else {
         alert(`Error: ${data.error || 'Failed to delete game'}`);
       }
@@ -1324,7 +1324,7 @@ const AdminPortal = () => {
     try {
       const now = new Date().toISOString();
       
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/admin/games/${gameId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1346,7 +1346,7 @@ const AdminPortal = () => {
       if (data.success) {
         // Use the current time we just sent, NOT the backend's response
         // This ensures the timer starts at 0:00 correctly
-        console.log(`🎯 Kickoff started at: ${now}`);
+        console.log(`ðŸŽ¯ Kickoff started at: ${now}`);
         
         // Start timer immediately at 0:00 and begin counting
         updateGame(gameId, {
@@ -1359,7 +1359,7 @@ const AdminPortal = () => {
           gamePaused: false,
           kickoffStartTime: now
         });
-        alert('✅ Kickoff started! Timer counting 0:00');
+        alert('âœ… Kickoff started! Timer counting 0:00');
       } else {
         alert(`Error: ${data.details || data.error || 'Failed to start kickoff'}`);
       }
@@ -1376,7 +1376,7 @@ const AdminPortal = () => {
 
     try {
       const now = new Date().toISOString();
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/admin/games/${gameId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1395,7 +1395,7 @@ const AdminPortal = () => {
           gamePaused: true,
           kickoffPausedAt: kickoffPausedAt
         });
-        alert('⏸️ Game paused!');
+        alert('â¸ï¸ Game paused!');
       } else {
         console.error('Pause error:', data);
         alert(`Error: ${data.details || data.error || 'Failed to pause game'}`);
@@ -1425,7 +1425,7 @@ const AdminPortal = () => {
       const newKickoffStartTimeMs = kickoffStartMs + pauseDuration;
       const newKickoffStartTime = new Date(newKickoffStartTimeMs).toISOString();
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/admin/games/${gameId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1448,7 +1448,7 @@ const AdminPortal = () => {
           kickoffStartTime: kickoffStartTime,
           kickoffPausedAt: undefined
         });
-        alert('▶️ Game resumed!');
+        alert('â–¶ï¸ Game resumed!');
       } else {
         console.error('Resume error:', data);
         alert(`Error: ${data.details || data.error || 'Failed to resume game'}`);
@@ -1504,7 +1504,7 @@ const AdminPortal = () => {
       // Preserve existing DB markets, only update 1X2 odds
       const existingMarkets = game.markets || {};
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/admin/games/${gameId}/score`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1544,7 +1544,7 @@ const AdminPortal = () => {
     if (!game) return;
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/admin/games/${gameId}/end`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1559,7 +1559,7 @@ const AdminPortal = () => {
         updateGame(gameId, {
           status: "finished",
         });
-        alert('✅ Game finished!');
+        alert('âœ… Game finished!');
       } else {
         console.error('End game error:', data);
         alert(`Error: ${data.details || data.error || 'Failed to end game'}`);
@@ -1575,12 +1575,12 @@ const AdminPortal = () => {
     const game = games.find((g) => g.id === gameId);
     if (!game) return;
 
-    if (!window.confirm('⚠️ Are you sure you want to revert this finished game back to LIVE?\n\nThis will unsettl all settled bets and reverse any winnings credited.')) {
+    if (!window.confirm('âš ï¸ Are you sure you want to revert this finished game back to LIVE?\n\nThis will unsettl all settled bets and reverse any winnings credited.')) {
       return;
     }
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/admin/games/${gameId}/revert`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1595,7 +1595,7 @@ const AdminPortal = () => {
         updateGame(gameId, {
           status: "live",
         });
-        alert('✅ Game reverted to LIVE! All settled bets have been unsettled.');
+        alert('âœ… Game reverted to LIVE! All settled bets have been unsettled.');
       } else {
         console.error('Revert game error:', data);
         alert(`Error: ${data.details || data.error || 'Failed to revert game'}`);
@@ -1612,8 +1612,8 @@ const AdminPortal = () => {
     if (!game) return;
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
-      console.log(`⏱️  Marking halftime for game: ${gameId}`);
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+      console.log(`â±ï¸  Marking halftime for game: ${gameId}`);
       
       const response = await fetch(`${apiUrl}/api/admin/games/${gameId}/halftime`, {
         method: 'PUT',
@@ -1624,13 +1624,13 @@ const AdminPortal = () => {
       });
 
       const data = await response.json();
-      console.log('📊 Halftime response:', data);
+      console.log('ðŸ“Š Halftime response:', data);
 
       if (data.success) {
         updateGame(gameId, { isHalftime: true, gamePaused: true });
-        alert('✅ Halftime marked! Timer paused at 45:00');
+        alert('âœ… Halftime marked! Timer paused at 45:00');
       } else {
-        console.error('❌ Halftime error:', data);
+        console.error('âŒ Halftime error:', data);
         alert(`Error: ${data.details || data.error || 'Failed to mark halftime'}`);
       }
     } catch (error) {
@@ -1645,8 +1645,8 @@ const AdminPortal = () => {
     if (!game) return;
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
-      console.log(`▶️  Resuming second half for game: ${gameId}`);
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+      console.log(`â–¶ï¸  Resuming second half for game: ${gameId}`);
       
       const response = await fetch(`${apiUrl}/api/admin/games/${gameId}/resume-second-half`, {
         method: 'PUT',
@@ -1657,7 +1657,7 @@ const AdminPortal = () => {
       });
 
       const data = await response.json();
-      console.log('📊 Resume second half response:', data);
+      console.log('ðŸ“Š Resume second half response:', data);
 
       if (data.success) {
         // Calculate the adjusted kickoff time for 45:00 start
@@ -1672,9 +1672,9 @@ const AdminPortal = () => {
           minute: 45,
           seconds: 0
         });
-        alert('✅ Second half resumed! Timer starting at 45:00');
+        alert('âœ… Second half resumed! Timer starting at 45:00');
       } else {
-        console.error('❌ Resume second half error:', data);
+        console.error('âŒ Resume second half error:', data);
         alert(`Error: ${data.details || data.error || 'Failed to resume second half'}`);
       }
     } catch (error) {
@@ -1686,8 +1686,8 @@ const AdminPortal = () => {
   const markGameLive = async (gameId: string) => {
     if (!ensureManualGame(gameId)) return;
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
-      console.log(`🔴 Marking game as live: ${gameId}`);
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+      console.log(`ðŸ”´ Marking game as live: ${gameId}`);
       
       const response = await fetch(`${apiUrl}/api/admin/games/${gameId}`, {
         method: 'PUT',
@@ -1699,13 +1699,13 @@ const AdminPortal = () => {
       });
 
       const data = await response.json();
-      console.log('📊 Mark live response:', data);
+      console.log('ðŸ“Š Mark live response:', data);
 
       if (data.success) {
         updateGame(gameId, { status: "live" });
-        alert('✅ Game marked as live!');
+        alert('âœ… Game marked as live!');
       } else {
-        console.error('❌ Mark live error:', data);
+        console.error('âŒ Mark live error:', data);
         alert(`Error: ${data.details || data.error || 'Failed to mark game as live'}`);
       }
     } catch (error) {
@@ -1725,8 +1725,8 @@ const AdminPortal = () => {
     let marketsSaved = false;
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
-      console.log(`✏️  Updating game details: ${gameId}`);
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+      console.log(`âœï¸  Updating game details: ${gameId}`);
       
       // Update game details (league, teams, kickoff, 1X2 odds)
       const response = await fetch(`${apiUrl}/api/admin/games/${gameId}/details`, {
@@ -1746,17 +1746,17 @@ const AdminPortal = () => {
       });
 
       const data = await response.json();
-      console.log('📊 Update details response:', data);
+      console.log('ðŸ“Š Update details response:', data);
 
       if (!data.success) {
-        console.error('❌ Update error:', data);
+        console.error('âŒ Update error:', data);
         alert(`Error: ${data.details || data.error || 'Failed to update game details'}`);
         return;
       }
 
       // If markets are provided, also save them
       if (details.markets && Object.keys(details.markets).length > 0) {
-        console.log(`📊 Saving markets for game ${gameId}`);
+        console.log(`ðŸ“Š Saving markets for game ${gameId}`);
         const marketsToSave = Object.fromEntries(
           Object.entries(details.markets).filter(([_, v]) => {
             if (v == null || v === undefined) return false;
@@ -1769,7 +1769,7 @@ const AdminPortal = () => {
           const marketPayload = Object.fromEntries(
             Object.entries(marketsToSave).map(([k, v]) => [k, typeof v === 'number' ? v : parseFloat(v as any)])
           );
-          console.log(`📊 Sending ${Object.keys(marketPayload).length} markets to backend:`, JSON.stringify(marketPayload).slice(0, 200));
+          console.log(`ðŸ“Š Sending ${Object.keys(marketPayload).length} markets to backend:`, JSON.stringify(marketPayload).slice(0, 200));
           
           const marketsResponse = await fetch(`${apiUrl}/api/admin/games/${gameId}/markets`, {
             method: 'PUT',
@@ -1782,11 +1782,11 @@ const AdminPortal = () => {
           });
 
           const marketsData = await marketsResponse.json();
-          console.log('📊 Markets save response:', marketsData);
+          console.log('ðŸ“Š Markets save response:', marketsData);
           
           if (!marketsData.success) {
-            console.error('❌ Markets save error:', marketsData);
-            alert(`⚠️ Game details saved but markets failed: ${marketsData.error || 'Unknown error'}`);
+            console.error('âŒ Markets save error:', marketsData);
+            alert(`âš ï¸ Game details saved but markets failed: ${marketsData.error || 'Unknown error'}`);
             return;
           }
           
@@ -1827,7 +1827,7 @@ const AdminPortal = () => {
       const newEdit = { ...gameDetailsEdit };
       delete newEdit[gameId];
       setGameDetailsEdit(newEdit);
-      alert('✅ Game details and markets updated!');
+      alert('âœ… Game details and markets updated!');
     } catch (error) {
       console.error('Error updating game details:', error);
       alert('Failed to update game details: ' + error.message);
@@ -1840,8 +1840,8 @@ const AdminPortal = () => {
     if (!game) return;
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
-      console.log(`⏱️  Setting custom time for game: ${gameId} to ${minute}:${seconds}`);
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+      console.log(`â±ï¸  Setting custom time for game: ${gameId} to ${minute}:${seconds}`);
       
       const response = await fetch(`${apiUrl}/api/admin/games/${gameId}/set-time`, {
         method: 'PUT',
@@ -1854,7 +1854,7 @@ const AdminPortal = () => {
       });
 
       const data = await response.json();
-      console.log('📊 Set time response:', data);
+      console.log('ðŸ“Š Set time response:', data);
 
       if (data.success) {
         updateGame(gameId, {
@@ -1862,9 +1862,9 @@ const AdminPortal = () => {
           seconds,
           kickoffStartTime: data.newKickoffStartTime
         });
-        alert(`✅ Timer set to ${minute}:${String(seconds).padStart(2, '0')}`);
+        alert(`âœ… Timer set to ${minute}:${String(seconds).padStart(2, '0')}`);
       } else {
-        console.error('❌ Set time error:', data);
+        console.error('âŒ Set time error:', data);
         alert(`Error: ${data.details || data.error || 'Failed to set timer'}`);
       }
     } catch (error) {
@@ -1887,12 +1887,12 @@ const AdminPortal = () => {
       if (bet) {
         const result = await updateBetStatus(betId, "Won", bet.potentialWin);
         if (result.success) {
-          console.log(`✅ Bet ${betId} marked as Won with KSH ${bet.potentialWin}`);
+          console.log(`âœ… Bet ${betId} marked as Won with KSH ${bet.potentialWin}`);
           // Refresh user data to show updated balance
-          console.log('🔄 Refreshing user data to show updated balance');
+          console.log('ðŸ”„ Refreshing user data to show updated balance');
           await fetchUsersFromBackend();
         } else {
-          console.error(`❌ Failed to mark bet as Won:`, result.error);
+          console.error(`âŒ Failed to mark bet as Won:`, result.error);
           alert(`Failed to settle bet: ${result.error}`);
           return;
         }
@@ -1901,12 +1901,12 @@ const AdminPortal = () => {
       // If any selection is lost, the bet is lost
       const result = await updateBetStatus(betId, "Lost", 0);
       if (result.success) {
-        console.log(`✅ Bet ${betId} marked as Lost`);
+        console.log(`âœ… Bet ${betId} marked as Lost`);
         // Refresh user data after settling
-        console.log('🔄 Refreshing user data after bet settlement');
+        console.log('ðŸ”„ Refreshing user data after bet settlement');
         await fetchUsersFromBackend();
       } else {
-        console.error(`❌ Failed to mark bet as Lost:`, result.error);
+        console.error(`âŒ Failed to mark bet as Lost:`, result.error);
         alert(`Failed to settle bet: ${result.error}`);
         return;
       }
@@ -1922,7 +1922,7 @@ const AdminPortal = () => {
     if (!bet?.id || sendingBetSmsId === bet.id || smsTriggeredBets[bet.id]) return;
     setSendingBetSmsId(bet.id);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const adminPhone = localStorage.getItem("adminPhone") || localStorage.getItem("userPhone") || loggedInUser?.phone || "0712345678";
       const response = await fetch(`${apiUrl}/api/admin/bets/${bet.id}/send-sms`, {
         method: 'POST',
@@ -1962,7 +1962,7 @@ const AdminPortal = () => {
   const fetchFailedPayments = async () => {
     setLoadingPayments(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/payments/admin/failed`);
       const data = await response.json();
       if (data.success) {
@@ -1979,7 +1979,7 @@ const AdminPortal = () => {
   const fetchAllTransactions = async () => {
     setLoadingPayments(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const phone = loggedInUser?.phone || '';
       const response = await fetch(`${apiUrl}/api/admin/transactions?phone=${encodeURIComponent(phone)}`, {
         method: 'GET',
@@ -2061,7 +2061,7 @@ const AdminPortal = () => {
   const fetchAllPayments = async () => {
     setLoadingPayments(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const phone = loggedInUser?.phone || '';
       const response = await fetch(`${apiUrl}/api/admin/payments?phone=${encodeURIComponent(phone)}`, {
         method: 'GET',
@@ -2084,7 +2084,7 @@ const AdminPortal = () => {
       setResolvingPayment(externalReference);
       const data = resolutionData[externalReference] || {};
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(
         `${apiUrl}/api/payments/admin/resolve/${externalReference}`,
         {
@@ -2163,7 +2163,7 @@ const AdminPortal = () => {
       attempts += 1;
 
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+        const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
         const response = await fetch(`${apiUrl}/api/admin/daraja-test/status?phone=${encodeURIComponent(loggedInUser?.phone || '')}&checkoutRequestId=${encodeURIComponent(checkoutRequestId)}`);
         const data = await response.json();
 
@@ -2247,7 +2247,7 @@ const AdminPortal = () => {
     setDarajaTestMessage('Sending STK push request to Daraja...');
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/admin/daraja-test/deposit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2433,7 +2433,7 @@ const AdminPortal = () => {
             {showImageImport && (
               <div className="mb-6 animate-fade-up rounded-xl border border-primary/30 bg-card p-6 neon-border">
                 <h4 className="mb-2 font-display text-sm font-bold uppercase text-foreground">Import Games from Image</h4>
-                <p className="mb-4 text-xs text-muted-foreground">Upload a screenshot of betting odds. The system reads team names, odds, kickoff times, and leagues — then you can review, edit, and add them.</p>
+                <p className="mb-4 text-xs text-muted-foreground">Upload a screenshot of betting odds. The system reads team names, odds, kickoff times, and leagues â€” then you can review, edit, and add them.</p>
                 <input
                   ref={imageInputRef}
                   type="file"
@@ -2445,7 +2445,7 @@ const AdminPortal = () => {
                   }}
                 />
 
-                {/* Upload area — show only if no parsed games yet */}
+                {/* Upload area â€” show only if no parsed games yet */}
                 {parsedImportGames.length === 0 && (
                   <div
                     className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-background/50 p-8 transition hover:border-primary/70 hover:bg-background/80"
@@ -2463,7 +2463,7 @@ const AdminPortal = () => {
                       <>
                         <Upload className="h-10 w-10 text-muted-foreground" />
                         <p className="mt-3 text-sm font-medium text-foreground">Click to upload or paste an image</p>
-                        <p className="mt-1 text-xs text-muted-foreground">PNG, JPG, or screenshot — you can also Ctrl+V to paste</p>
+                        <p className="mt-1 text-xs text-muted-foreground">PNG, JPG, or screenshot â€” you can also Ctrl+V to paste</p>
                       </>
                     )}
                   </div>
@@ -2516,7 +2516,7 @@ const AdminPortal = () => {
                         {pg.saved ? (
                           <div className="flex items-center gap-2 text-green-400">
                             <CheckCircle className="h-4 w-4" />
-                            <span className="text-sm font-medium">{pg.homeTeam} vs {pg.awayTeam} — Added!</span>
+                            <span className="text-sm font-medium">{pg.homeTeam} vs {pg.awayTeam} â€” Added!</span>
                           </div>
                         ) : (
                           <>
@@ -2709,7 +2709,7 @@ const AdminPortal = () => {
             )}
 
             <div className="space-y-3">
-              {/* ── Select-all / bulk-delete toolbar (upcoming + live games only) ── */}
+              {/* â”€â”€ Select-all / bulk-delete toolbar (upcoming + live games only) â”€â”€ */}
               {(() => {
                 const selectableGames = sortGamesByKickoffTime(games).filter(g => g.status === 'upcoming' || g.status === 'live');
                 const allSelected = selectableGames.length > 0 && selectableGames.every(g => markedGames.has(g.id));
@@ -2744,7 +2744,7 @@ const AdminPortal = () => {
                         disabled={deletingMarkedGames}
                       >
                         <Trash2 className="mr-1 h-3 w-3" />
-                        {deletingMarkedGames ? 'Deleting…' : `Delete ${markedGames.size} selected`}
+                        {deletingMarkedGames ? 'Deletingâ€¦' : `Delete ${markedGames.size} selected`}
                       </Button>
                     )}
                   </div>
@@ -2759,7 +2759,7 @@ const AdminPortal = () => {
                     </div>
                   )}
                   <div className="flex items-center justify-between">
-                    {/* Checkbox — only for upcoming/live games */}
+                    {/* Checkbox â€” only for upcoming/live games */}
                     {(game.status === 'upcoming' || game.status === 'live') && (
                       <input
                         type="checkbox"
@@ -2787,7 +2787,7 @@ const AdminPortal = () => {
                         <span>1: <span className="font-mono font-bold text-primary">{game.homeOdds.toFixed(2)}</span></span>
                         <span>X: <span className="font-mono font-bold text-primary">{game.drawOdds.toFixed(2)}</span></span>
                         <span>2: <span className="font-mono font-bold text-primary">{game.awayOdds.toFixed(2)}</span></span>
-                        <span>📅 {game.time}</span>
+                        <span>ðŸ“… {game.time}</span>
                       </div>
 
                       {/* Edit Game Details Button */}
@@ -2817,7 +2817,7 @@ const AdminPortal = () => {
                               // Ensure every marketLabels key exists in state so edits are tracked
                               for (const k of Object.keys(marketLabels)) {
                                 if (editableMarkets[k] === undefined || editableMarkets[k] === null) {
-                                  // leave absent — will show as empty input
+                                  // leave absent â€” will show as empty input
                                 } else {
                                   editableMarkets[k] = editableMarkets[k]; // keep DB value
                                 }
@@ -3152,7 +3152,7 @@ const AdminPortal = () => {
                                 onClick={() => markHalftime(game.id)}
                                 className="text-xs"
                               >
-                                ⏱️ Halftime
+                                â±ï¸ Halftime
                               </Button>
                             )}
 
@@ -3164,7 +3164,7 @@ const AdminPortal = () => {
                                 onClick={() => resumeSecondHalf(game.id)}
                                 className="text-xs"
                               >
-                                ▶️ Resume 2nd Half
+                                â–¶ï¸ Resume 2nd Half
                               </Button>
                             )}
 
@@ -3481,7 +3481,7 @@ const AdminPortal = () => {
                                     />
                                   </td>
                                   <td className="p-2 text-muted-foreground text-[10px] font-semibold">
-                                    {game.game_id && String(game.game_id).startsWith('af-') ? '🔗 API' : '✏️ Manual'}
+                                    {game.game_id && String(game.game_id).startsWith('af-') ? 'ðŸ”— API' : 'âœï¸ Manual'}
                                   </td>
                                   <td className="p-2 text-muted-foreground">{game.league || '-'}</td>
                                   <td className="p-2 text-foreground font-medium">{game.homeTeam} vs {game.awayTeam}</td>
@@ -3520,7 +3520,7 @@ const AdminPortal = () => {
                   onClick={() => setSelectedGameForEvents(null)}
                   className="mb-4"
                 >
-                  ← Back to Games
+                  â† Back to Games
                 </Button>
                 <MatchEventEditor
                   gameId={selectedGameForEvents.id}
@@ -3678,7 +3678,7 @@ const AdminPortal = () => {
                               variant="hero"
                               onClick={async () => {
                                 try {
-                                  const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+                                  const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
 
                                   // If user details are being edited, call the backend API
                                   if (
@@ -3747,7 +3747,7 @@ const AdminPortal = () => {
                                   }
                                   setEditingUserId(null);
                                   setEditingUserData({});
-                                  alert('✅ User data updated successfully!');
+                                  alert('âœ… User data updated successfully!');
                                 } catch (error) {
                                   console.error('Error saving user data:', error);
                                   alert('Failed to save user data');
@@ -3864,7 +3864,7 @@ const AdminPortal = () => {
                                 const action = user.isBanned ? 'unban' : 'ban';
                                 if (!window.confirm(`Are you sure you want to ${action} ${user.name}?`)) return;
                                 try {
-                                  const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+                                  const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
                                   const res = await fetch(`${apiUrl}/api/admin/users/${user.id}/ban`, {
                                     method: 'PUT',
                                     headers: { 'Content-Type': 'application/json' },
@@ -4049,7 +4049,7 @@ const AdminPortal = () => {
                   onClick={fetchAllTransactions}
                   disabled={loadingPayments}
                 >
-                  {loadingPayments ? '...' : '↻ Refresh'}
+                  {loadingPayments ? '...' : 'â†» Refresh'}
                 </Button>
               </div>
             </Card>
@@ -4101,7 +4101,7 @@ const AdminPortal = () => {
                                 {getTransactionAccountLabel(transaction)} - Deposit
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {formatTransactionDateInEAT(transaction.created_at)} via {transaction.method || 'M-Pesa'}{transaction.phone_number ? ` • ${transaction.phone_number}` : ''}
+                                {formatTransactionDateInEAT(transaction.created_at)} via {transaction.method || 'M-Pesa'}{transaction.phone_number ? ` â€¢ ${transaction.phone_number}` : ''}
                               </p>
                             </div>
                           </div>
@@ -4178,7 +4178,7 @@ const AdminPortal = () => {
                           {getTransactionAccountLabel(transaction)} - {transaction.type === "withdrawal" ? "Withdrawal" : transaction.type}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {formatTransactionDateInEAT(transaction.created_at)} via {transaction.method || 'M-Pesa'}{transaction.phone_number ? ` • ${transaction.phone_number}` : ''}
+                          {formatTransactionDateInEAT(transaction.created_at)} via {transaction.method || 'M-Pesa'}{transaction.phone_number ? ` â€¢ ${transaction.phone_number}` : ''}
                         </p>
                       </div>
                     </div>
@@ -4235,7 +4235,7 @@ const AdminPortal = () => {
                   <p className="text-sm text-muted-foreground">Revenue Today</p>
                   <p className="mt-4 text-3xl font-bold text-gold">KSH {todayRevenue.toLocaleString()}</p>
                 </div>
-                <div className="text-6xl text-gold/30">💰</div>
+                <div className="text-6xl text-gold/30">ðŸ’°</div>
               </div>
             </Card>
           </TabsContent>
@@ -4825,7 +4825,7 @@ const AdminPortal = () => {
           onClose={() => setShowFetchGamesModal(false)}
           onExecute={async (games) => {
             try {
-              const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+              const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
               
               // Step 1: Fetch existing games to check for duplicates
               let existingGameIds = new Set<string>();
@@ -4858,7 +4858,7 @@ const AdminPortal = () => {
                   
                   if (existingGameIds.has(afGameId) || existingGameIds.has(matchKey)) {
                     skipCount++;
-                    console.log(`⏭️ Skipping duplicate: ${game.home_team} vs ${game.away_team}`);
+                    console.log(`â­ï¸ Skipping duplicate: ${game.home_team} vs ${game.away_team}`);
                     continue;
                   }
 
@@ -4912,7 +4912,7 @@ const AdminPortal = () => {
               }
 
               // Show result and refresh
-              const parts = [`✅ Added ${successCount} games`];
+              const parts = [`âœ… Added ${successCount} games`];
               if (skipCount > 0) parts.push(`${skipCount} duplicates skipped`);
               if (failCount > 0) parts.push(`${failCount} failed`);
               alert(parts.join(', ') + '!');

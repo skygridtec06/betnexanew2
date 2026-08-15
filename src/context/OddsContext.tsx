@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef } from "react";
+﻿import { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef } from "react";
 import { buildApiUrl } from "@/lib/api";
 
 export interface GameOdds {
@@ -45,12 +45,12 @@ const loadCachedGames = (): GameOdds[] => {
     if (cached) {
       const parsed = JSON.parse(cached);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        console.log('📦 Loaded', parsed.length, 'cached games from localStorage');
+        console.log('ðŸ“¦ Loaded', parsed.length, 'cached games from localStorage');
         return parsed;
       }
     }
   } catch (error) {
-    console.warn('⚠️ Error loading cached games:', error);
+    console.warn('âš ï¸ Error loading cached games:', error);
   }
   return [];
 };
@@ -60,7 +60,7 @@ const saveCachedGames = (games: GameOdds[]): void => {
   try {
     localStorage.setItem('betnexa_games_cache', JSON.stringify(games));
   } catch (error) {
-    console.warn('⚠️ Error saving games to cache:', error);
+    console.warn('âš ï¸ Error saving games to cache:', error);
   }
 };
 
@@ -92,7 +92,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
     try {
       const apiUrl = buildApiUrl('/api');
       
-      console.log('🔄 Fetching fresh games from:', apiUrl);
+      console.log('ðŸ”„ Fetching fresh games from:', apiUrl);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 second timeout
@@ -104,13 +104,13 @@ export function OddsProvider({ children }: { children: ReactNode }) {
 
       clearTimeout(timeoutId);
 
-      console.log('📊 Fetch response status:', response.status);
+      console.log('ðŸ“Š Fetch response status:', response.status);
 
       if (response.ok) {
         const data = await response.json();
         
         if (data.success && Array.isArray(data.games)) {
-          console.log('✅ Successfully loaded', data.games.length, 'games from API');
+          console.log('âœ… Successfully loaded', data.games.length, 'games from API');
           
           // Transform database games to GameOdds format
           const transformedGames: GameOdds[] = data.games.map((g: any) => ({
@@ -140,7 +140,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
           const seenIds = new Set<string>();
           const deduplicatedGames = transformedGames.filter(game => {
             if (seenIds.has(game.id)) {
-              console.warn(`⚠️ Duplicate game removed: ${game.id} (${game.homeTeam} vs ${game.awayTeam})`);
+              console.warn(`âš ï¸ Duplicate game removed: ${game.id} (${game.homeTeam} vs ${game.awayTeam})`);
               return false;
             }
             seenIds.add(game.id);
@@ -154,18 +154,18 @@ export function OddsProvider({ children }: { children: ReactNode }) {
           saveCachedGames(sortedGames);
           setLoadError(null);
         } else {
-          console.warn('⚠️ Invalid response format:', data);
+          console.warn('âš ï¸ Invalid response format:', data);
           setLoadError(null); // Don't show error, just start with empty games
         }
       } else {
-        console.warn('⚠️ API returned non-OK status:', response.status);
+        console.warn('âš ï¸ API returned non-OK status:', response.status);
         setLoadError(null); // Don't block app from loading
       }
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        console.warn('⏱️ Game fetch timeout (10s)');
+        console.warn('â±ï¸ Game fetch timeout (10s)');
       } else {
-        console.error('❌ Error fetching games:', error);
+        console.error('âŒ Error fetching games:', error);
       }
       setLoadError(null); // Don't block app from loading
     } finally {
@@ -192,7 +192,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
       
       if (liveGames.length === 0) return; // No live games, skip fetch
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const now = Date.now();
 
       // Separate games into local-calc and backend-fetch groups
@@ -221,8 +221,8 @@ export function OddsProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // ⚡ OPTIMIZATION: Use batch endpoint for multiple games (replaces individual requests)
-      // This reduces: 20 games = 20 requests → 1 request (95% reduction)
+      // âš¡ OPTIMIZATION: Use batch endpoint for multiple games (replaces individual requests)
+      // This reduces: 20 games = 20 requests â†’ 1 request (95% reduction)
       let backendResults = [];
       if (backendGames.length > 0) {
         try {
@@ -274,13 +274,13 @@ export function OddsProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(timerInterval);
   }, []); // No dependencies - interval runs once and uses ref for current games
 
-  // ⛔ Live data polling DISABLED — automatic sync from API-Football disabled
+  // â›” Live data polling DISABLED â€” automatic sync from API-Football disabled
   // Admin must manually trigger syncs. This prevents continuous API calls.
   // useEffect(() => {
   //   const syncApiGames = async () => {
   //     if (!hasApiGamesNeedingSync()) return;
   //
-  //     const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+  //     const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
   //
   //     try {
   //       // 1. Trigger a server-side sync of scores + odds from API-Football
@@ -290,7 +290,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
   //       // are reflected immediately in the UI sections.
   //       await refreshGames();
   //     } catch {
-  //       // Silently ignore — live data will try again next cycle
+  //       // Silently ignore â€” live data will try again next cycle
   //     }
   //   };
   //
@@ -316,7 +316,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
     const marketCheckInterval = setInterval(async () => {
       if (gamesRef.current.length === 0) return;
       
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       
       try {
         const controller = new AbortController();
@@ -345,7 +345,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
                 const currentMarketsStr = JSON.stringify((currentGame.markets || {}) || {});
                 
                 if (newMarketsStr !== currentMarketsStr) {
-                  console.log(`📊 [MARKET UPDATE] Market change detected for ${gameId}: ${newGame.home_team} vs ${newGame.away_team}`);
+                  console.log(`ðŸ“Š [MARKET UPDATE] Market change detected for ${gameId}: ${newGame.home_team} vs ${newGame.away_team}`);
                   console.log(`   Old markets keys: ${Object.keys(currentGame.markets || {}).length}`);
                   console.log(`   New markets keys: ${Object.keys(newGame.markets || {}).length}`);
                   
@@ -353,7 +353,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
                   for (const [key, value] of Object.entries(newGame.markets || {})) {
                     const oldValue = currentGame.markets?.[key];
                     if (oldValue !== value) {
-                      console.log(`   ${key}: ${oldValue} → ${value}`);
+                      console.log(`   ${key}: ${oldValue} â†’ ${value}`);
                     }
                   }
                   
@@ -365,7 +365,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
             
             // If we detected market changes, refresh the full game list immediately
             if (hasMarketUpdates) {
-              console.log('🔄 [MARKET UPDATE] Market changes detected - refreshing games for all users');
+              console.log('ðŸ”„ [MARKET UPDATE] Market changes detected - refreshing games for all users');
               setGames(prev => {
                 const transformedGames: GameOdds[] = data.games.map((g: any) => ({
                   id: g.game_id || g.id,
@@ -398,7 +398,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
                 });
                 
                 const sortedGames = deduplicatedGames.sort((a, b) => a.id.localeCompare(b.id));
-                console.log(`✅ [MARKET UPDATE] Updated ${sortedGames.length} games with new market data`);
+                console.log(`âœ… [MARKET UPDATE] Updated ${sortedGames.length} games with new market data`);
                 gamesRef.current = sortedGames;
                 // Save to localStorage cache after market updates
                 saveCachedGames(sortedGames);
@@ -415,10 +415,10 @@ export function OddsProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(marketCheckInterval);
   }, []);
 
-  // ⛔ Daily schedule maintenance DISABLED — automatic bootstrap-schedule fetch removed
+  // â›” Daily schedule maintenance DISABLED â€” automatic bootstrap-schedule fetch removed
   // useEffect(() => {
   //   const ensureSchedule = async () => {
-  //     const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+  //     const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
   //     try {
   //       const resp = await fetch(`${apiUrl}/api/live/bootstrap-schedule`, {
   //         signal: AbortSignal.timeout(45000),
@@ -439,7 +439,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
 
   const refreshGames = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 second timeout
@@ -482,7 +482,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
           const seenIds = new Set<string>();
           const deduplicatedGames = transformedGames.filter(game => {
             if (seenIds.has(game.id)) {
-              console.warn(`⚠️ Duplicate game removed in refresh: ${game.id} (${game.homeTeam} vs ${game.awayTeam})`);
+              console.warn(`âš ï¸ Duplicate game removed in refresh: ${game.id} (${game.homeTeam} vs ${game.awayTeam})`);
               return false;
             }
             seenIds.add(game.id);
@@ -498,9 +498,9 @@ export function OddsProvider({ children }: { children: ReactNode }) {
       }
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        console.warn('⏱️ Game refresh timeout (10s)');
+        console.warn('â±ï¸ Game refresh timeout (10s)');
       } else {
-        console.error('❌ Error refreshing games:', error);
+        console.error('âŒ Error refreshing games:', error);
       }
     }
   };
@@ -509,7 +509,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
     setGames((prev) => {
       // Check for duplicates by ID
       if (prev.some(g => g.id === game.id)) {
-        console.warn(`⚠️ Duplicate game detected with ID ${game.id}, skipping add`);
+        console.warn(`âš ï¸ Duplicate game detected with ID ${game.id}, skipping add`);
         return prev;
       }
       // Add new game and maintain stable sort by ID
@@ -529,7 +529,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
           // Track when game was kicked off
           if (!game.isKickoffStarted && newGame.isKickoffStarted) {
             kickoffTimesRef.current[id] = Date.now();
-            console.log(`⏱️ [KICKOFF] Game ${id} started at ${new Date(kickoffTimesRef.current[id]).toISOString()}`);
+            console.log(`â±ï¸ [KICKOFF] Game ${id} started at ${new Date(kickoffTimesRef.current[id]).toISOString()}`);
           }
           return newGame;
         }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -63,7 +63,7 @@ export function EarningsCalculator() {
   const fetchEarnings = async (start: string, end: string) => {
     setLoading(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const summaryResponse = await fetch(
         `${apiUrl}/api/admin/earnings?startDate=${start}&endDate=${end}&phone=${adminPhone}`,
         { headers: { 'Content-Type': 'application/json' }, method: 'GET' }
@@ -83,7 +83,7 @@ export function EarningsCalculator() {
 
     // Fetch daily breakdown (optional)
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const dailyResponse = await fetch(
         `${apiUrl}/api/admin/earnings/daily?startDate=${start}&endDate=${end}&phone=${adminPhone}`,
         { headers: { 'Content-Type': 'application/json' }, method: 'GET' }
@@ -107,7 +107,7 @@ export function EarningsCalculator() {
     setDayLoading(true);
     setDayTransactions([]);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const res = await fetch(
         `${apiUrl}/api/admin/earnings/day-details?date=${date}&phone=${adminPhone}`,
         { headers: { 'Content-Type': 'application/json' }, method: 'GET' }
@@ -410,7 +410,7 @@ export function EarningsCalculator() {
         <Card className="border-primary/20 bg-card/50 p-4 neon-border">
           <div className="mb-3 flex items-center justify-between">
             <h4 className="font-display text-xs font-bold uppercase text-foreground">
-              Transactions — {selectedDay}
+              Transactions â€” {selectedDay}
             </h4>
             <button
               onClick={() => { setSelectedDay(null); setDayTransactions([]); }}

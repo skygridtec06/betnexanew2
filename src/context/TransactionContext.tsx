@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+﻿import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 
 export interface Transaction {
   id: string;
@@ -50,14 +50,14 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
   const fetchTransactions = async (userId: string) => {
     try {
       setIsLoading(true);
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/admin/transactions/user/${userId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
 
       if (!response.ok) {
-        console.warn('⚠️ Failed to fetch transactions from server');
+        console.warn('âš ï¸ Failed to fetch transactions from server');
         return;
       }
 
@@ -81,16 +81,16 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
         }));
 
         setTransactions(transformedTransactions);
-        console.log(`✅ Fetched ${transformedTransactions.length} transactions from server for user ${userId}`);
+        console.log(`âœ… Fetched ${transformedTransactions.length} transactions from server for user ${userId}`);
 
         // Store activation fees if returned
         if (data.activation_fees) {
           setActivationFees(data.activation_fees);
-          console.log(`✅ Fetched ${data.activation_fees.length} activation fees`);
+          console.log(`âœ… Fetched ${data.activation_fees.length} activation fees`);
         }
       }
     } catch (error) {
-      console.error('❌ Error fetching transactions:', error);
+      console.error('âŒ Error fetching transactions:', error);
     } finally {
       setIsLoading(false);
     }
@@ -101,7 +101,7 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
     setTransactions((prev) => [transaction, ...prev]);
     
     // Optionally sync to database (transactions are already created by payment endpoint)
-    console.log('📊 Transaction added locally:', transaction.id);
+    console.log('ðŸ“Š Transaction added locally:', transaction.id);
   };
 
   const updateTransactionStatus = async (
@@ -110,7 +110,7 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
     phone?: string
   ) => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const endpoint = status === 'failed'
         ? `${apiUrl}/api/admin/transactions/${transactionId}/mark-rejected`
         : status === 'pending'
@@ -129,13 +129,13 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
         setTransactions((prev) =>
           prev.map((t) => (t.id === transactionId ? { ...t, status } : t))
         );
-        console.log(`✅ Transaction ${transactionId} marked as ${status} on server`);
+        console.log(`âœ… Transaction ${transactionId} marked as ${status} on server`);
       } else {
-        console.error('❌ Failed to update transaction status:', data.message);
+        console.error('âŒ Failed to update transaction status:', data.message);
         throw new Error(data.message);
       }
     } catch (error) {
-      console.error('❌ Error updating transaction status:', error);
+      console.error('âŒ Error updating transaction status:', error);
       throw error;
     }
   };

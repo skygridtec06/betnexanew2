@@ -1,4 +1,4 @@
-require('dotenv').config({ path: require('path').resolve(__dirname, '.env') });
+﻿require('dotenv').config({ path: require('path').resolve(__dirname, '.env') });
 const supabase = require('./services/database.js');
 
 (async () => {
@@ -11,7 +11,7 @@ const supabase = require('./services/database.js');
     const admin = data[0];
     console.log('ADMIN_FOUND', JSON.stringify(admin));
 
-    const base = 'https://betnexarevivebackend.vercel.app';
+    const base = 'https://betnexabackend.co.ke';
     const tests = [
       { amount: 1, paymentType: 'deposit' },
       { amount: 9999, paymentType: 'activation' },

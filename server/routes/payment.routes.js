@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Payment Routes
  * Handles deposit requests and payment status checks
  */
@@ -40,7 +40,7 @@ async function handlePaymentTimeout(externalReference, checkoutRequestId, paymen
   return new Promise((resolve) => {
     setTimeout(async () => {
       try {
-        console.log(`\n⏰ [TIMEOUT CHECK] Checking payment: ${externalReference}`);
+        console.log(`\nâ° [TIMEOUT CHECK] Checking payment: ${externalReference}`);
         
         // Check if payment is still PENDING (no callback received)
         let currentPaymentStatus = 'PENDING';
@@ -57,7 +57,7 @@ async function handlePaymentTimeout(externalReference, checkoutRequestId, paymen
             currentPaymentStatus = data.status;
           }
         } catch (dbError) {
-          console.warn('⚠️ Timeout check DB error:', dbError.message);
+          console.warn('âš ï¸ Timeout check DB error:', dbError.message);
           // Fall back to cache
           const cachedPayment = paymentCache.getPayment(externalReference);
           if (cachedPayment) {
@@ -68,14 +68,14 @@ async function handlePaymentTimeout(externalReference, checkoutRequestId, paymen
         if (currentPaymentStatus === 'PENDING') {
           // Do NOT auto-fail deposits after short delays; users can take time to enter PIN.
           // Final state should come from callback or live status polling.
-          console.log(`⏳ [TIMEOUT CHECK] Payment still pending after 10 seconds: ${externalReference}. Leaving as pending.`);
+          console.log(`â³ [TIMEOUT CHECK] Payment still pending after 10 seconds: ${externalReference}. Leaving as pending.`);
         } else {
-          console.log(`✅ [TIMEOUT CHECK] Payment ${externalReference} has status: ${currentPaymentStatus} - No timeout needed\n`);
+          console.log(`âœ… [TIMEOUT CHECK] Payment ${externalReference} has status: ${currentPaymentStatus} - No timeout needed\n`);
         }
         
         resolve();
       } catch (error) {
-        console.error('❌ [TIMEOUT] Error in timeout handler:', error);
+        console.error('âŒ [TIMEOUT] Error in timeout handler:', error);
         resolve();
       }
     }, 10000); // 10 seconds
@@ -103,18 +103,18 @@ async function creditBalanceIfNotDone(externalReference, userId, amount) {
   // Check idempotency: skip if already completed in either table
   const { data: done } = await supabase.from('transactions').select('id').eq('external_reference', externalReference).eq('status', 'completed').maybeSingle();
   const { data: doneDeposit } = await supabase.from('deposits').select('id').eq('external_reference', externalReference).eq('status', 'completed').maybeSingle();
-  if (done || doneDeposit) { console.log('⚠️ Already credited for', externalReference); return false; }
+  if (done || doneDeposit) { console.log('âš ï¸ Already credited for', externalReference); return false; }
 
   // Fetch full user balance fields for consistent update
   const { data: user } = await supabase.from('users').select('account_balance, stakeable_balance, withdrawable_balance').eq('id', userId).single();
-  if (!user) { console.warn('⚠️ User not found for credit:', userId); return false; }
+  if (!user) { console.warn('âš ï¸ User not found for credit:', userId); return false; }
 
   const prevStakeable = parseFloat(user.stakeable_balance) || 0;
   const newStakeable = prevStakeable + parseFloat(amount);
   const newBalance = newStakeable + (parseFloat(user.withdrawable_balance) || 0);
 
   await supabase.from('users').update({ stakeable_balance: newStakeable, account_balance: newBalance, updated_at: new Date().toISOString() }).eq('id', userId);
-  console.log(`✅ [STATUS POLL] Stakeable credited: ${prevStakeable} → ${newStakeable}, total: ${newBalance} (user ${userId})`);
+  console.log(`âœ… [STATUS POLL] Stakeable credited: ${prevStakeable} â†’ ${newStakeable}, total: ${newBalance} (user ${userId})`);
 
   // Mark pending transaction completed (fetch it first)
   const { data: pendingTx } = await supabase.from('transactions').select('id, status').eq('external_reference', externalReference).eq('status', 'pending').maybeSingle();
@@ -133,12 +133,12 @@ async function creditBalanceIfNotDone(externalReference, userId, amount) {
 
 /**
  * GET /api/payments/status/:externalReference
- * Check payment status — also queries PayHero live and credits balance on success
+ * Check payment status â€” also queries PayHero live and credits balance on success
  */
 router.get('/status/:externalReference', async (req, res) => {
   try {
     const { externalReference } = req.params;
-    console.log('🔍 Checking payment status:', externalReference);
+    console.log('ðŸ” Checking payment status:', externalReference);
 
     const normalizeStatus = (value) => {
       const s = (value || '').toString().trim().toLowerCase();
@@ -184,10 +184,10 @@ router.get('/status/:externalReference', async (req, res) => {
       if (phResult.ok && phResult.body) {
         const phStatus = (phResult.body.status || phResult.body.Status || '').toString().toLowerCase();
         const phCode = phResult.body.result_code ?? phResult.body.ResultCode ?? phResult.body.response_code;
-        console.log('📡 PayHero live status:', phStatus, 'code:', phCode);
+        console.log('ðŸ“¡ PayHero live status:', phStatus, 'code:', phCode);
 
         if (phStatus === 'success' || phCode === 0 || phCode === '0') {
-          try { await creditBalanceIfNotDone(externalReference, paymentRecord.user_id, paymentRecord.amount); } catch (e) { console.warn('⚠️ Credit error in poll:', e.message); }
+          try { await creditBalanceIfNotDone(externalReference, paymentRecord.user_id, paymentRecord.amount); } catch (e) { console.warn('âš ï¸ Credit error in poll:', e.message); }
           await supabase.from('payments').update({ status: 'Success', updated_at: new Date().toISOString() }).eq('external_reference', externalReference);
           return res.json({ success: true, payment: { ...paymentRecord, status: 'Success', source: 'payhero-live' } });
         } else if (phStatus === 'failed' || phStatus === 'cancelled') {
@@ -206,7 +206,7 @@ router.get('/status/:externalReference', async (req, res) => {
     if (paymentRecord) {
       const normalized = normalizeStatus(paymentRecord.status);
       if (normalized === 'Success') {
-        try { await creditBalanceIfNotDone(externalReference, paymentRecord.user_id, paymentRecord.amount); } catch (e) { console.warn('⚠️ Credit error on normalized success:', e.message); }
+        try { await creditBalanceIfNotDone(externalReference, paymentRecord.user_id, paymentRecord.amount); } catch (e) { console.warn('âš ï¸ Credit error on normalized success:', e.message); }
       }
       return res.json({ success: true, payment: { ...paymentRecord, status: normalized } });
     }
@@ -214,7 +214,7 @@ router.get('/status/:externalReference', async (req, res) => {
     res.json({ success: true, payment: { status: 'Pending', message: 'Payment status not yet available. Please wait...' } });
 
   } catch (error) {
-    console.error('❌ Status Check Error:', error);
+    console.error('âŒ Status Check Error:', error);
     res.status(500).json({ success: false, message: 'Failed to check payment status', error: error.message });
   }
 });
@@ -225,7 +225,7 @@ router.get('/status/:externalReference', async (req, res) => {
  */
 router.get('/admin/failed', async (req, res) => {
   try {
-    console.log('📋 Admin fetching failed payments...');
+    console.log('ðŸ“‹ Admin fetching failed payments...');
 
     // Try to get from database
     try {
@@ -236,7 +236,7 @@ router.get('/admin/failed', async (req, res) => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.warn('⚠️ Database error fetching failed payments:', error.message);
+        console.warn('âš ï¸ Database error fetching failed payments:', error.message);
         return res.json({
           success: true,
           payments: [],
@@ -244,14 +244,14 @@ router.get('/admin/failed', async (req, res) => {
         });
       }
 
-      console.log(`✅ Found ${data.length} failed payments`);
+      console.log(`âœ… Found ${data.length} failed payments`);
       res.json({
         success: true,
         payments: data || [],
         count: (data || []).length
       });
     } catch (dbError) {
-      console.warn('⚠️ Database connection error:', dbError.message);
+      console.warn('âš ï¸ Database connection error:', dbError.message);
       // Return cached failed payments
       const cachedPayments = paymentCache.getAllPayments()
         .filter(p => p.status === 'FAILED');
@@ -264,7 +264,7 @@ router.get('/admin/failed', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('❌ Admin Failed Payments Error:', error);
+    console.error('âŒ Admin Failed Payments Error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch failed payments',
@@ -282,7 +282,7 @@ router.post('/admin/resolve/:externalReference', async (req, res) => {
     const { externalReference } = req.params;
     const { mpesaReceipt, resultDesc } = req.body;
 
-    console.log(`\n💼 Admin resolving payment: ${externalReference}`);
+    console.log(`\nðŸ’¼ Admin resolving payment: ${externalReference}`);
 
     // Get payment details
     let paymentData = null;
@@ -297,26 +297,26 @@ router.post('/admin/resolve/:externalReference', async (req, res) => {
 
       if (!error && data) {
         paymentData = data;
-        console.log('✅ Payment found in database');
+        console.log('âœ… Payment found in database');
       } else {
-        console.warn('⚠️ Payment not in database, checking cache');
+        console.warn('âš ï¸ Payment not in database, checking cache');
         paymentData = paymentCache.getPayment(externalReference);
         if (paymentData) {
           isFromCache = true;
-          console.log('✅ Payment found in cache');
+          console.log('âœ… Payment found in cache');
         }
       }
     } catch (dbError) {
-      console.warn('⚠️ Database error:', dbError.message);
+      console.warn('âš ï¸ Database error:', dbError.message);
       paymentData = paymentCache.getPayment(externalReference);
       if (paymentData) {
         isFromCache = true;
-        console.log('✅ Payment found in cache (DB unavailable)');
+        console.log('âœ… Payment found in cache (DB unavailable)');
       }
     }
 
     if (!paymentData) {
-      console.warn('⚠️ Payment not found:', externalReference);
+      console.warn('âš ï¸ Payment not found:', externalReference);
       return res.status(404).json({
         success: false,
         message: 'Payment not found'
@@ -326,7 +326,7 @@ router.post('/admin/resolve/:externalReference', async (req, res) => {
     const { user_id, amount } = paymentData;
 
     // Update payment status to success
-    console.log('\n📝 Updating payment status to SUCCESS...');
+    console.log('\nðŸ“ Updating payment status to SUCCESS...');
     if (!isFromCache) {
       try {
         const { error: updateError } = await supabase
@@ -341,12 +341,12 @@ router.post('/admin/resolve/:externalReference', async (req, res) => {
           .eq('external_reference', externalReference);
 
         if (updateError) {
-          console.warn('⚠️ Failed to update payment status:', updateError.message);
+          console.warn('âš ï¸ Failed to update payment status:', updateError.message);
         } else {
-          console.log('✅ Payment marked as SUCCESS in database');
+          console.log('âœ… Payment marked as SUCCESS in database');
         }
       } catch (dbError) {
-        console.warn('⚠️ Database error updating payment:', dbError.message);
+        console.warn('âš ï¸ Database error updating payment:', dbError.message);
       }
     }
 
@@ -357,11 +357,11 @@ router.post('/admin/resolve/:externalReference', async (req, res) => {
       cachedPayment.result_code = 0;
       cachedPayment.result_desc = resultDesc || 'Admin resolved - Marked as success';
       cachedPayment.mpesa_receipt_number = mpesaReceipt || 'ADMIN-RESOLVED';
-      console.log('✅ Cache updated: Payment marked as SUCCESS');
+      console.log('âœ… Cache updated: Payment marked as SUCCESS');
     }
 
     // Update user balance
-    console.log('\n💰 Updating user balance...');
+    console.log('\nðŸ’° Updating user balance...');
     if (!isFromCache) {
       try {
         // Get current balance
@@ -380,18 +380,18 @@ router.post('/admin/resolve/:externalReference', async (req, res) => {
             .eq('id', user_id);
 
           if (balanceError) {
-            console.error('❌ Failed to update balance:', balanceError.message);
+            console.error('âŒ Failed to update balance:', balanceError.message);
             return res.status(500).json({
               success: false,
               message: 'Payment marked as success but failed to update balance',
               error: balanceError.message
             });
           } else {
-            console.log(`✅ Balance updated. New balance: ${newBalance}`);
+            console.log(`âœ… Balance updated. New balance: ${newBalance}`);
           }
         }
       } catch (dbError) {
-        console.warn('⚠️ Database error updating balance:', dbError.message);
+        console.warn('âš ï¸ Database error updating balance:', dbError.message);
         return res.status(500).json({
           success: false,
           message: 'Failed to update user balance',
@@ -399,11 +399,11 @@ router.post('/admin/resolve/:externalReference', async (req, res) => {
         });
       }
     } else {
-      console.log('✅ Balance update noted (database unavailable)');
+      console.log('âœ… Balance update noted (database unavailable)');
     }
 
     // Record successful transaction
-    console.log('\n📊 Recording resolved transaction...');
+    console.log('\nðŸ“Š Recording resolved transaction...');
     if (!isFromCache) {
       try {
         const { error: transactionError } = await supabase
@@ -421,19 +421,19 @@ router.post('/admin/resolve/:externalReference', async (req, res) => {
           });
 
         if (transactionError) {
-          console.warn('⚠️ Failed to record transaction:', transactionError.message);
+          console.warn('âš ï¸ Failed to record transaction:', transactionError.message);
           // Still return success since balance was updated
         } else {
-          console.log('✅ Transaction recorded');
+          console.log('âœ… Transaction recorded');
         }
       } catch (dbError) {
-        console.warn('⚠️ Database error recording transaction:', dbError.message);
+        console.warn('âš ï¸ Database error recording transaction:', dbError.message);
       }
     } else {
-      console.log('✅ Transaction record noted (database unavailable)');
+      console.log('âœ… Transaction record noted (database unavailable)');
     }
 
-    console.log(`\n✅ Payment resolved successfully: ${externalReference}\n`);
+    console.log(`\nâœ… Payment resolved successfully: ${externalReference}\n`);
 
     res.json({
       success: true,
@@ -443,7 +443,7 @@ router.post('/admin/resolve/:externalReference', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Payment Resolution Error:', error);
+    console.error('âŒ Payment Resolution Error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to resolve payment',
@@ -460,7 +460,7 @@ router.get('/user-balance/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
 
-    console.log('💰 Fetching user balance for:', userId);
+    console.log('ðŸ’° Fetching user balance for:', userId);
 
     // Fetch from database
     try {
@@ -470,7 +470,7 @@ router.get('/user-balance/:userId', async (req, res) => {
         .eq('id', userId);
 
       if (error) {
-        console.warn('⚠️ Database error fetching balance:', error.message);
+        console.warn('âš ï¸ Database error fetching balance:', error.message);
         return res.json({
           success: true,
           balance: null,
@@ -481,7 +481,7 @@ router.get('/user-balance/:userId', async (req, res) => {
       }
 
       if (!data || data.length === 0) {
-        console.warn('⚠️ User not found in database:', userId);
+        console.warn('âš ï¸ User not found in database:', userId);
         return res.json({
           success: true,
           balance: null,
@@ -498,7 +498,7 @@ router.get('/user-balance/:userId', async (req, res) => {
       const availableToBet = stakeableBalance;
       const withdrawalActivated = data[0].withdrawal_activated || false;
       const withdrawalActivationDate = data[0].withdrawal_activation_date || null;
-      console.log('✅ User balance fetched successfully:', { userId, accountBalance, stakeableBalance, withdrawableBalance, withdrawalActivated });
+      console.log('âœ… User balance fetched successfully:', { userId, accountBalance, stakeableBalance, withdrawableBalance, withdrawalActivated });
 
       res.json({
         success: true,
@@ -515,7 +515,7 @@ router.get('/user-balance/:userId', async (req, res) => {
         timestamp: new Date().toISOString()
       });
     } catch (dbError) {
-      console.warn('⚠️ Database error fetching balance:', dbError.message);
+      console.warn('âš ï¸ Database error fetching balance:', dbError.message);
       res.json({
         success: true,
         balance: null,
@@ -525,7 +525,7 @@ router.get('/user-balance/:userId', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('❌ Balance Fetch Error:', error);
+    console.error('âŒ Balance Fetch Error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch user balance',
@@ -550,7 +550,7 @@ router.put('/admin/update-balance/:userId', async (req, res) => {
       });
     }
 
-    console.log(`\n💼 Admin updating balance for user: ${userId}`);
+    console.log(`\nðŸ’¼ Admin updating balance for user: ${userId}`);
     console.log(`   New Balance: ${newBalance}, Reason: ${reason}`);
 
     // Get current balance for the transaction record
@@ -566,7 +566,7 @@ router.put('/admin/update-balance/:userId', async (req, res) => {
         previousBalance = parseFloat(data.account_balance) || 0;
       }
     } catch (err) {
-      console.warn('⚠️ Could not fetch previous balance:', err.message);
+      console.warn('âš ï¸ Could not fetch previous balance:', err.message);
     }
 
     // Update balance in database
@@ -577,7 +577,7 @@ router.put('/admin/update-balance/:userId', async (req, res) => {
         .eq('id', userId);
 
       if (updateError) {
-        console.error('❌ Failed to update balance:', updateError.message);
+        console.error('âŒ Failed to update balance:', updateError.message);
         return res.status(500).json({
           success: false,
           message: 'Failed to update balance',
@@ -585,9 +585,9 @@ router.put('/admin/update-balance/:userId', async (req, res) => {
         });
       }
 
-      console.log(`✅ Balance updated. Previous: ${previousBalance}, New: ${newBalance}`);
+      console.log(`âœ… Balance updated. Previous: ${previousBalance}, New: ${newBalance}`);
     } catch (dbError) {
-      console.error('❌ Database error:', dbError.message);
+      console.error('âŒ Database error:', dbError.message);
       return res.status(500).json({
         success: false,
         message: 'Database error',
@@ -614,15 +614,15 @@ router.put('/admin/update-balance/:userId', async (req, res) => {
         });
 
       if (transactionError) {
-        console.warn('⚠️ Failed to record admin transaction:', transactionError.message);
+        console.warn('âš ï¸ Failed to record admin transaction:', transactionError.message);
       } else {
-        console.log('✅ Admin transaction recorded');
+        console.log('âœ… Admin transaction recorded');
       }
     } catch (transactionError) {
-      console.warn('⚠️ Transaction error:', transactionError.message);
+      console.warn('âš ï¸ Transaction error:', transactionError.message);
     }
 
-    console.log(`\n✅ Balance update completed for user ${userId}\n`);
+    console.log(`\nâœ… Balance update completed for user ${userId}\n`);
 
     res.json({
       success: true,
@@ -634,7 +634,7 @@ router.put('/admin/update-balance/:userId', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Admin Balance Update Error:', error);
+    console.error('âŒ Admin Balance Update Error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to update user balance',
@@ -651,7 +651,7 @@ router.post('/admin/complete/:externalReference', async (req, res) => {
   try {
     const { externalReference } = req.params;
 
-    console.log('🔧 Admin attempting to complete payment:', externalReference);
+    console.log('ðŸ”§ Admin attempting to complete payment:', externalReference);
 
     // Get from cache first
     let payment = paymentCache.getPayment(externalReference);
@@ -669,7 +669,7 @@ router.post('/admin/complete/:externalReference', async (req, res) => {
           payment = data;
         }
       } catch (dbError) {
-        console.warn('⚠️ Payment not found in database');
+        console.warn('âš ï¸ Payment not found in database');
       }
     }
 
@@ -706,10 +706,10 @@ router.post('/admin/complete/:externalReference', async (req, res) => {
         })
         .eq('external_reference', externalReference);
     } catch (dbError) {
-      console.warn('⚠️ Database update failed, using cache only:', dbError.message);
+      console.warn('âš ï¸ Database update failed, using cache only:', dbError.message);
     }
 
-    console.log('✅ Payment completed manually:', externalReference);
+    console.log('âœ… Payment completed manually:', externalReference);
 
     res.json({
       success: true,
@@ -718,7 +718,7 @@ router.post('/admin/complete/:externalReference', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Admin Payment Completion Error:', error);
+    console.error('âŒ Admin Payment Completion Error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to complete payment',
@@ -735,7 +735,7 @@ router.delete('/admin/users/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
 
-    console.log('🗑️ Admin attempting to delete user:', userId);
+    console.log('ðŸ—‘ï¸ Admin attempting to delete user:', userId);
 
     if (!userId) {
       return res.status(400).json({
@@ -767,12 +767,12 @@ router.delete('/admin/users/:userId', async (req, res) => {
 
       if (!error) {
         dbSuccess = true;
-        console.log('✅ User deleted from database:', userId);
+        console.log('âœ… User deleted from database:', userId);
       } else {
-        console.warn('⚠️ Database deletion error:', error.message);
+        console.warn('âš ï¸ Database deletion error:', error.message);
       }
     } catch (dbError) {
-      console.warn('⚠️ Database error during user deletion:', dbError.message);
+      console.warn('âš ï¸ Database error during user deletion:', dbError.message);
     }
 
     res.json({
@@ -783,7 +783,7 @@ router.delete('/admin/users/:userId', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ User Deletion Error:', error);
+    console.error('âŒ User Deletion Error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to delete user',
@@ -792,9 +792,9 @@ router.delete('/admin/users/:userId', async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // USER DARAJA DIRECT STK PUSH ENDPOINTS
-// ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * POST /api/payments/daraja/initiate
@@ -824,7 +824,7 @@ router.post('/daraja/initiate', async (req, res) => {
     const suffix = `${Date.now()}`.slice(-8);
     const externalReference = `DUSER-${paymentType.toUpperCase().slice(0, 3)}-${suffix}`;
 
-    const callbackBase = (process.env.DARAJA_TEST_CALLBACK_BASE_URL || process.env.SERVER_PUBLIC_URL || 'https://betnexarevivebackend.vercel.app').replace(/[\r\n]+/g, '').replace(/\/$/, '').trim();
+    const callbackBase = (process.env.DARAJA_TEST_CALLBACK_BASE_URL || process.env.SERVER_PUBLIC_URL || 'https://betnexabackend.co.ke').replace(/[\r\n]+/g, '').replace(/\/$/, '').trim();
     const callbackUrl = `${callbackBase}/api/callbacks/daraja-user`;
 
     // Pre-warm Daraja access token AND fetch user data in parallel to eliminate sequential delay
@@ -856,7 +856,7 @@ router.post('/daraja/initiate', async (req, res) => {
       accountReference = userIdentifier;
     }
 
-    // Send STK push — token is already warmed so this goes straight to the push request
+    // Send STK push â€” token is already warmed so this goes straight to the push request
     const result = await initiateAdminTestStkPush({
       phoneNumber: normalizedPhone,
       amount: parsedAmount,
@@ -865,7 +865,7 @@ router.post('/daraja/initiate', async (req, res) => {
       callbackUrl,
     });
 
-    // MUST await before responding — Vercel terminates the function as soon as the handler
+    // MUST await before responding â€” Vercel terminates the function as soon as the handler
     // returns, so background .then() promises are killed. The DB record must exist before
     // the response reaches the client (and before any M-Pesa callback can arrive).
     const registerResult = await registerUserDarajaAttempt({
@@ -926,7 +926,7 @@ router.get('/daraja/status', async (req, res) => {
           phoneNumber: callbackData.phoneNumber || null,
         });
         if (!funding.success) {
-          // Transaction not in DB yet (race) — treat as still pending, don't 500
+          // Transaction not in DB yet (race) â€” treat as still pending, don't 500
           console.warn('[daraja/status] ensureUserDarajaFunding not ready:', funding.error);
           return res.json({ success: true, status: 'pending', message: 'Payment processing, please wait' });
         }
@@ -962,7 +962,7 @@ router.get('/daraja/status', async (req, res) => {
         resultDesc: queryResult.ResultDesc || queryResult.resultDesc,
       });
       if (!funding.success) {
-        // Transaction not in DB yet — treat as pending, keep polling
+        // Transaction not in DB yet â€” treat as pending, keep polling
         console.warn('[daraja/status] ensureUserDarajaFunding not ready:', funding.error);
         return res.json({ success: true, status: 'pending', message: 'Payment processing, please wait' });
       }
@@ -996,18 +996,18 @@ router.get('/daraja/status', async (req, res) => {
 router.get('/debug/daraja-config', (req, res) => {
   try {
     const config = {
-      DARAJA_TEST_CONSUMER_KEY: process.env.DARAJA_TEST_CONSUMER_KEY ? '✓ SET' : '✗ MISSING',
-      DARAJA_TEST_CONSUMER_SECRET: process.env.DARAJA_TEST_CONSUMER_SECRET ? '✓ SET' : '✗ MISSING',
-      DARAJA_TEST_PARTY_B: process.env.DARAJA_TEST_PARTY_B || '✗ MISSING',
-      DARAJA_TEST_PASSKEY: process.env.DARAJA_TEST_PASSKEY ? '✓ SET' : '✗ MISSING',
-      DARAJA_TEST_SHORT_CODE: process.env.DARAJA_TEST_SHORT_CODE || '✗ MISSING',
+      DARAJA_TEST_CONSUMER_KEY: process.env.DARAJA_TEST_CONSUMER_KEY ? 'âœ“ SET' : 'âœ— MISSING',
+      DARAJA_TEST_CONSUMER_SECRET: process.env.DARAJA_TEST_CONSUMER_SECRET ? 'âœ“ SET' : 'âœ— MISSING',
+      DARAJA_TEST_PARTY_B: process.env.DARAJA_TEST_PARTY_B || 'âœ— MISSING',
+      DARAJA_TEST_PASSKEY: process.env.DARAJA_TEST_PASSKEY ? 'âœ“ SET' : 'âœ— MISSING',
+      DARAJA_TEST_SHORT_CODE: process.env.DARAJA_TEST_SHORT_CODE || 'âœ— MISSING',
       DARAJA_TEST_TRANSACTION_TYPE: process.env.DARAJA_TEST_TRANSACTION_TYPE || 'CustomerPayBillOnline',
       DARAJA_TEST_CALLBACK_BASE_URL: process.env.DARAJA_TEST_CALLBACK_BASE_URL || 'NOT SET',
       NODE_ENV: process.env.NODE_ENV || 'development',
       timestamp: new Date().toISOString()
     };
 
-    console.log('🔍 DEBUG: Daraja Configuration:', config);
+    console.log('ðŸ” DEBUG: Daraja Configuration:', config);
 
     res.json({
       success: true,
@@ -1016,7 +1016,7 @@ router.get('/debug/daraja-config', (req, res) => {
       message: 'Current Daraja configuration (PartyB is the till number receiving payments)'
     });
   } catch (error) {
-    console.error('❌ Debug error:', error);
+    console.error('âŒ Debug error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1034,11 +1034,11 @@ router.post('/test-deposit', async (req, res) => {
     }
 
     console.log('\n' + '='.repeat(80));
-    console.log('🧪 TEST DEPOSIT INITIATED');
+    console.log('ðŸ§ª TEST DEPOSIT INITIATED');
     console.log('='.repeat(80));
     
     // Log all environment variables
-    console.log('\n📋 Environment Variables:');
+    console.log('\nðŸ“‹ Environment Variables:');
     console.log('   DARAJA_TEST_PARTY_B:', process.env.DARAJA_TEST_PARTY_B || 'NOT SET');
     console.log('   DARAJA_TEST_SHORT_CODE:', process.env.DARAJA_TEST_SHORT_CODE || 'NOT SET');
     console.log('   DARAJA_TEST_CONSUMER_KEY:', process.env.DARAJA_TEST_CONSUMER_KEY ? 'SET' : 'NOT SET');
@@ -1049,10 +1049,10 @@ router.post('/test-deposit', async (req, res) => {
     const suffix = `${Date.now()}`.slice(-8);
     const externalReference = `TEST-${suffix}`;
 
-    const callbackBase = (process.env.DARAJA_TEST_CALLBACK_BASE_URL || process.env.SERVER_PUBLIC_URL || 'https://betnexarevivebackend.vercel.app').replace(/[\r\n]+/g, '').replace(/\/$/, '').trim();
+    const callbackBase = (process.env.DARAJA_TEST_CALLBACK_BASE_URL || process.env.SERVER_PUBLIC_URL || 'https://betnexabackend.co.ke').replace(/[\r\n]+/g, '').replace(/\/$/, '').trim();
     const callbackUrl = `${callbackBase}/api/callbacks/daraja-user`;
 
-    console.log('\n💳 Payment Details:');
+    console.log('\nðŸ’³ Payment Details:');
     console.log('   Phone:', normalizedPhone);
     console.log('   Amount:', amount);
     console.log('   Reference:', externalReference);
@@ -1067,12 +1067,12 @@ router.post('/test-deposit', async (req, res) => {
       callbackUrl,
     });
 
-    console.log('\n✅ STK Push Result:');
+    console.log('\nâœ… STK Push Result:');
     console.log('   CheckoutRequestID:', result.checkoutRequestId);
     console.log('   MerchantRequestID:', result.merchantRequestId);
     console.log('   Response:', result.responseDescription);
 
-    console.log('\n📍 IMPORTANT: Check your M-Pesa which till number the STK push is being sent to!');
+    console.log('\nðŸ“ IMPORTANT: Check your M-Pesa which till number the STK push is being sent to!');
     console.log('   The till number should be: ' + (process.env.DARAJA_TEST_PARTY_B || 'NOT SET'));
     console.log('='.repeat(80) + '\n');
 
@@ -1090,7 +1090,7 @@ router.post('/test-deposit', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Test deposit error:', error);
+    console.error('âŒ Test deposit error:', error);
     res.status(500).json({ 
       success: false, 
       message: error.message,

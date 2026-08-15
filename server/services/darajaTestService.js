@@ -1,4 +1,4 @@
-const https = require('https');
+﻿const https = require('https');
 
 const darajaHttpsAgent = new https.Agent({ keepAlive: true });
 let cachedAccessToken = null;
@@ -17,7 +17,7 @@ function getDarajaTestConfig() {
     shortCode: clean(process.env.DARAJA_TEST_SHORT_CODE) || '4320291',
     partyB: clean(process.env.DARAJA_TEST_PARTY_B) || '4320291',
     transactionType: clean(process.env.DARAJA_TEST_TRANSACTION_TYPE) || 'CustomerPayBillOnline',
-    callbackBaseUrl: cleanUrl(process.env.DARAJA_TEST_CALLBACK_BASE_URL || process.env.SERVER_PUBLIC_URL || 'https://betnexarevivebackend.vercel.app').replace(/\/$/, ''),
+    callbackBaseUrl: cleanUrl(process.env.DARAJA_TEST_CALLBACK_BASE_URL || process.env.SERVER_PUBLIC_URL || 'https://betnexabackend.co.ke').replace(/\/$/, ''),
   };
 
   const missing = Object.entries(config)

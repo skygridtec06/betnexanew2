@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Balance Sync Service
  * Keeps balance synchronized across all parts of the app by using server as source of truth
  */
@@ -87,7 +87,7 @@ class BalanceSyncService {
    */
   async fetchBalance(userId: string): Promise<number | null> {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const response = await fetch(
         `${apiUrl}/api/payments/user-balance/${userId}`
       );
@@ -135,7 +135,7 @@ class BalanceSyncService {
       if (newBalance !== null) {
         const lastBalance = this.lastFetchedBalance.get(userId);
         if (lastBalance === undefined || newBalance !== lastBalance) {
-          console.log(`💰 Balance synced for ${userId}: ${newBalance}`);
+          console.log(`ðŸ’° Balance synced for ${userId}: ${newBalance}`);
           this.notifyListeners(userId, newBalance);
         }
       }
@@ -153,7 +153,7 @@ class BalanceSyncService {
       clearInterval(this.syncInterval);
     }
 
-    console.log(`🔄 Starting auto-sync for ${userId} every ${intervalMs}ms`);
+    console.log(`ðŸ”„ Starting auto-sync for ${userId} every ${intervalMs}ms`);
     
     // Initial sync
     this.sync(userId);
@@ -171,7 +171,7 @@ class BalanceSyncService {
     if (this.syncInterval) {
       clearInterval(this.syncInterval);
       this.syncInterval = null;
-      console.log('🛑 Auto-sync stopped');
+      console.log('ðŸ›‘ Auto-sync stopped');
     }
   }
 

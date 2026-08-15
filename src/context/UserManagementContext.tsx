@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+﻿import { createContext, useContext, useState, ReactNode } from "react";
 
 export interface User {
   id: string;
@@ -59,8 +59,8 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
 
   const fetchUsersFromBackend = async (phone?: string) => {
     try {
-      console.log('📥 Fetching users from backend...');
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      console.log('ðŸ“¥ Fetching users from backend...');
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       const queryParam = phone ? `?phone=${encodeURIComponent(phone)}` : '';
       const response = await fetch(`${apiUrl}/api/admin/users${queryParam}`, {
         method: 'GET',
@@ -70,7 +70,7 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
 
       if (data.success && data.users && Array.isArray(data.users)) {
-        console.log(`✅ Received ${data.users.length} users from backend`);
+        console.log(`âœ… Received ${data.users.length} users from backend`);
         
         // Map database fields to User interface
         const mappedUsers: User[] = data.users.map((u: any) => {
@@ -98,15 +98,15 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
           };
         });
 
-        console.log(`✅ Mapped ${mappedUsers.length} users successfully`);
+        console.log(`âœ… Mapped ${mappedUsers.length} users successfully`);
         setAllUsers(mappedUsers);
       } else {
-        console.warn('⚠️  No users data in response or response not successful');
+        console.warn('âš ï¸  No users data in response or response not successful');
         console.log('Response data:', data);
-        console.warn('❌ Failed to fetch users - ensure admin phone is passed');
+        console.warn('âŒ Failed to fetch users - ensure admin phone is passed');
       }
     } catch (error) {
-      console.error('❌ Error fetching users from backend:', error);
+      console.error('âŒ Error fetching users from backend:', error);
     }
   };
 

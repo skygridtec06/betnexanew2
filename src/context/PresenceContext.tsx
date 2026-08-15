@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+﻿import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 
 interface UserPresence {
   id: string;
@@ -40,12 +40,12 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
   const [activeCount, setActiveCount] = useState(0);
   const [isTracking, setIsTracking] = useState(false);
 
-  const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+  const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
 
   // Start presence tracking (called on login)
   const startTracking = useCallback(async (user: { id: string; username?: string; phone?: string }) => {
     try {
-      console.log('\n🟢 [PresenceContext] Starting presence tracking for user:', user.id);
+      console.log('\nðŸŸ¢ [PresenceContext] Starting presence tracking for user:', user.id);
 
       const userAgent = navigator.userAgent;
       const response = await fetch(`${apiUrl}/api/presence/login`, {
@@ -63,7 +63,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
       if (data.success && data.sessionId) {
         setSessionId(data.sessionId);
-        console.log(`✅ Presence session created: ${data.sessionId}`);
+        console.log(`âœ… Presence session created: ${data.sessionId}`);
 
         // Start heartbeat
         startHeartbeat(data.sessionId);
@@ -73,7 +73,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
         subscribeToPresence();
       }
     } catch (error) {
-      console.error('❌ Error starting presence tracking:', error);
+      console.error('âŒ Error starting presence tracking:', error);
     }
   }, [apiUrl]);
 
@@ -93,13 +93,13 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify({ sessionId: sId })
         });
       } catch (error) {
-        console.warn('⚠️ Heartbeat send failed:', error);
+        console.warn('âš ï¸ Heartbeat send failed:', error);
       }
     };
 
     sendHeartbeat();
 
-    // Send heartbeat every 15 s — reduces requests by 67% while staying within 30 s server window.
+    // Send heartbeat every 15 s â€” reduces requests by 67% while staying within 30 s server window.
     // Users may appear offline ~10s after disconnect, but significantly reduces API load.
     // This change: -8 requests/min per user (was 12, now 4)
     heartbeatInterval = setInterval(sendHeartbeat, 15000);
@@ -108,7 +108,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
   // Stop presence tracking (called on logout)
   const stopTracking = useCallback(async () => {
     try {
-      console.log('\n🔴 [PresenceContext] Stopping presence tracking');
+      console.log('\nðŸ”´ [PresenceContext] Stopping presence tracking');
 
       if (sessionId) {
         await fetch(`${apiUrl}/api/presence/logout`, {
@@ -134,7 +134,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
       setActiveCount(0);
       sessionStorage.removeItem('presence_tracked_user_id');
     } catch (error) {
-      console.error('❌ Error stopping presence tracking:', error);
+      console.error('âŒ Error stopping presence tracking:', error);
     }
   }, [sessionId, apiUrl]);
 
@@ -151,21 +151,21 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
         setActiveCount(data.activeCount);
       }
     } catch (error) {
-      // On network errors keep the existing list visible — don't blink
+      // On network errors keep the existing list visible â€” don't blink
       // users away just because one poll failed.
-      console.warn('⚠️ Error fetching active users (keeping current list):', error);
+      console.warn('âš ï¸ Error fetching active users (keeping current list):', error);
     }
   }, [apiUrl]);
 
   // Subscribe to presence updates.
   const subscribeToPresence = useCallback(() => {
     try {
-      console.log('📡 Attempting to subscribe to real-time presence updates...');
+      console.log('ðŸ“¡ Attempting to subscribe to real-time presence updates...');
       // For now, use polling as fallback
       // Real-time subscriptions will be handled if Supabase client is available
       fetchActiveUsers();
     } catch (error) {
-      console.warn('⚠️ Subscription error:', error);
+      console.warn('âš ï¸ Subscription error:', error);
       fetchActiveUsers();
     }
   }, [fetchActiveUsers]);
@@ -178,7 +178,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
       clearInterval(activeUsersInterval);
     }
 
-    // Poll every 10 s — reduced from 3s to save 70% of these requests.
+    // Poll every 10 s â€” reduced from 3s to save 70% of these requests.
     // Active user count slightly delayed but real-time presence still works.
     // This change: -12 requests/min per user (was 20, now 6)
     activeUsersInterval = setInterval(() => {

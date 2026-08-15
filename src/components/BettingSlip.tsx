@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, Trash2, ChevronUp, ChevronDown, CheckCircle, Copy, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -161,7 +161,7 @@ export function BettingSlip({ items, onRemove, onClear }: BettingSlipProps) {
     setIsPlacing(true);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexarevivebackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
       
       // Call backend to place bet and deduct balance
       const response = await fetch(`${apiUrl}/api/bets/place`, {
@@ -211,7 +211,7 @@ export function BettingSlip({ items, onRemove, onClear }: BettingSlipProps) {
       addBet(newBet);
 
       toast({
-        title: "Bet Placed Successfully! 🎉",
+        title: "Bet Placed Successfully! ðŸŽ‰",
         description: `BetID: ${data.bet.betId} | KSH ${stakeNum.toFixed(2)} on ${items.length} selection${items.length > 1 ? "s" : ""} - Potential win: KSH ${potentialWin.toFixed(2)}`,
       });
 
@@ -257,7 +257,7 @@ export function BettingSlip({ items, onRemove, onClear }: BettingSlipProps) {
               <div>
                 <p className="text-xs font-medium text-foreground">{item.match}</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {item.market === 'CS' ? 'CORRECT SCORE' : item.market === 'O/U' ? 'OVER/UNDER' : item.market === 'HT/FT' ? 'HALF TIME/FULL TIME' : item.market === 'DC' ? 'DOUBLE CHANCE' : item.market === 'BTTS' ? 'BOTH TEAMS TO SCORE' : item.market} - <span className="font-semibold text-primary">{getPickLabel(item.type)}</span> — <span className="font-mono font-bold text-primary">{item.odds.toFixed(2)}</span>
+                  {item.market === 'CS' ? 'CORRECT SCORE' : item.market === 'O/U' ? 'OVER/UNDER' : item.market === 'HT/FT' ? 'HALF TIME/FULL TIME' : item.market === 'DC' ? 'DOUBLE CHANCE' : item.market === 'BTTS' ? 'BOTH TEAMS TO SCORE' : item.market} - <span className="font-semibold text-primary">{getPickLabel(item.type)}</span> â€” <span className="font-mono font-bold text-primary">{item.odds.toFixed(2)}</span>
                 </p>
               </div>
               <button onClick={() => onRemove(item.matchId)} className="text-muted-foreground hover:text-destructive">
@@ -337,7 +337,7 @@ export function BettingSlip({ items, onRemove, onClear }: BettingSlipProps) {
             >
               {isPlacing ? (
                 <>
-                  <span className="animate-spin mr-1 inline-block">⏳</span> Placing...
+                  <span className="animate-spin mr-1 inline-block">â³</span> Placing...
                 </>
               ) : (
                 <>
