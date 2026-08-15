@@ -40,7 +40,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
   const [activeCount, setActiveCount] = useState(0);
   const [isTracking, setIsTracking] = useState(false);
 
-  const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+  const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
 
   // Start presence tracking (called on login)
   const startTracking = useCallback(async (user: { id: string; username?: string; phone?: string }) => {
@@ -251,3 +251,5 @@ export function usePresence() {
   }
   return context;
 }
+
+

@@ -60,7 +60,7 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
   const fetchUsersFromBackend = async (phone?: string) => {
     try {
       console.log('ðŸ“¥ Fetching users from backend...');
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
       const queryParam = phone ? `?phone=${encodeURIComponent(phone)}` : '';
       const response = await fetch(`${apiUrl}/api/admin/users${queryParam}`, {
         method: 'GET',
@@ -126,5 +126,7 @@ export function useUserManagement() {
   }
   return context;
 }
+
+
 
 

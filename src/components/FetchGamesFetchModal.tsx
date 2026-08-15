@@ -32,7 +32,7 @@ export const FetchGamesFetchModal = ({ isOpen, onClose, onExecute }: FetchGamesF
     setStep('fetching');
     setErrorMsg('');
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
       const adminPhone = localStorage.getItem("adminPhone") || localStorage.getItem("userPhone") || "0712345678";
       
       const response = await fetch(`${apiUrl}/api/admin/fetch-api-football/fetch-preview`, {
@@ -241,3 +241,5 @@ export const FetchGamesFetchModal = ({ isOpen, onClose, onExecute }: FetchGamesF
     </Dialog>
   );
 };
+
+

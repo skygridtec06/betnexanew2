@@ -50,7 +50,7 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
   const fetchTransactions = async (userId: string) => {
     try {
       setIsLoading(true);
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
       const response = await fetch(`${apiUrl}/api/admin/transactions/user/${userId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
@@ -110,7 +110,7 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
     phone?: string
   ) => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
       const endpoint = status === 'failed'
         ? `${apiUrl}/api/admin/transactions/${transactionId}/mark-rejected`
         : status === 'pending'
@@ -178,3 +178,5 @@ export function useTransactions() {
   }
   return context;
 }
+
+

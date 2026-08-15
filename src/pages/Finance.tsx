@@ -211,7 +211,7 @@ export default function Finance() {
     if (!user?.phone) return null;
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
       const response = await fetch(`${apiUrl}/api/auth/profile/${encodeURIComponent(user.phone)}`);
       const data = await response.json();
 
@@ -243,7 +243,7 @@ export default function Finance() {
     setPaymentStatus("initiating");
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
       if (!user?.id) {
         throw new Error("Unable to identify the current user. Please refresh and try again.");
       }
@@ -439,7 +439,7 @@ export default function Finance() {
     withdrawalInProgress.current = true;
     const withdrawalKey = `WTH-${Date.now()}-${user.id}`;
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
       const response = await fetch(`${apiUrl}/api/admin/transactions/withdrawal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -525,7 +525,7 @@ export default function Finance() {
         }
 
         setStatusMessage("ðŸ”„ Sending STK push via M-Pesa...");
-        const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+        const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
         const response = await fetch(`${apiUrl}/api/payments/daraja/initiate`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -661,7 +661,7 @@ export default function Finance() {
 
       const withdrawalKey = `WTH-${Date.now()}-${user.id}`;
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+        const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
         const response = await fetch(`${apiUrl}/api/admin/transactions/withdrawal`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1303,3 +1303,5 @@ export default function Finance() {
     </div>
   );
 }
+
+

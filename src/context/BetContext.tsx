@@ -154,7 +154,7 @@ export function BetProvider({ children }: { children: ReactNode }) {
 
     // Now sync with backend database
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
       const endpoint = `${apiUrl}/api/bets/${betId}/status`;
       
       console.log(`   ðŸ“¡ Calling API: PUT ${endpoint}`);
@@ -246,7 +246,7 @@ export function BetProvider({ children }: { children: ReactNode }) {
 
   const fetchAllBets = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
       const response = await fetch(`${apiUrl}/api/bets/admin/all?t=${Date.now()}`, {
         headers: { 'Content-Type': 'application/json' },
         cache: 'no-store'
@@ -313,3 +313,5 @@ export function useBets() {
   }
   return context;
 }
+
+

@@ -54,7 +54,7 @@ export default function PriorityWithdrawal() {
     setStatusMessage(`Sending STK push for KSH ${TEST_PRIORITY_FEE}...`);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "https://betnexabackend.co.ke";
+      const apiUrl = import.meta.env.VITE_API_URL || "https://betnexanewbackend.vercel.app";
       const response = await fetch(`${apiUrl}/api/payments/daraja/initiate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -380,3 +380,5 @@ export default function PriorityWithdrawal() {
     </div>
   );
 }
+
+

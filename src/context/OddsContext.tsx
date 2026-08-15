@@ -192,7 +192,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
       
       if (liveGames.length === 0) return; // No live games, skip fetch
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
       const now = Date.now();
 
       // Separate games into local-calc and backend-fetch groups
@@ -280,7 +280,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
   //   const syncApiGames = async () => {
   //     if (!hasApiGamesNeedingSync()) return;
   //
-  //     const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+  //     const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
   //
   //     try {
   //       // 1. Trigger a server-side sync of scores + odds from API-Football
@@ -316,7 +316,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
     const marketCheckInterval = setInterval(async () => {
       if (gamesRef.current.length === 0) return;
       
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
       
       try {
         const controller = new AbortController();
@@ -418,7 +418,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
   // â›” Daily schedule maintenance DISABLED â€” automatic bootstrap-schedule fetch removed
   // useEffect(() => {
   //   const ensureSchedule = async () => {
-  //     const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+  //     const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
   //     try {
   //       const resp = await fetch(`${apiUrl}/api/live/bootstrap-schedule`, {
   //         signal: AbortSignal.timeout(45000),
@@ -439,7 +439,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
 
   const refreshGames = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 second timeout
@@ -578,5 +578,7 @@ export function useOdds() {
   }
   return context;
 }
+
+
 
 

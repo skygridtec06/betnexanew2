@@ -32,7 +32,7 @@ export function ActiveMembers() {
   const [isOpen, setIsOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+  const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -156,3 +156,5 @@ export function ActiveMembers() {
     </>
   );
 }
+
+

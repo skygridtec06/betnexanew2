@@ -87,7 +87,7 @@ class BalanceSyncService {
    */
   async fetchBalance(userId: string): Promise<number | null> {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexabackend.co.ke';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
       const response = await fetch(
         `${apiUrl}/api/payments/user-balance/${userId}`
       );
@@ -206,3 +206,5 @@ class BalanceSyncService {
 const balanceSyncService = new BalanceSyncService();
 
 export default balanceSyncService;
+
+
