@@ -1,4 +1,4 @@
-﻿const DEFAULT_BACKEND_URL = 'https://betnexanewbackend.vercel.app';
+﻿const DEFAULT_BACKEND_URL = 'https://www.betnexabackend.co.ke';
 
 export function getApiBaseUrl(): string {
   const configured = import.meta.env.VITE_API_URL?.trim();

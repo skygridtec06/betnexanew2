@@ -3,13 +3,28 @@
  * Handles database connections (using Supabase)
  */
 
+const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 
+if (!process.env.SUPABASE_URL && !process.env.SUPABASE_SERVICE_KEY && !process.env.SUPABASE_ANON_KEY) {
+  require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
+}
+
 const supabaseUrl = process.env.SUPABASE_URL || 'https://eaqogmybihiqzivuwyav.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+const rawServiceKey = process.env.SUPABASE_SERVICE_KEY;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+function isJwtLikeKey(value) {
+  return typeof value === 'string' && value.trim().length > 20 && value.split('.').length === 3;
+}
+
+const supabaseServiceKey = isJwtLikeKey(rawServiceKey) ? rawServiceKey : null;
 let supabaseKeyType = supabaseServiceKey ? 'SERVICE_KEY' : (supabaseAnonKey ? 'ANON_KEY' : 'NO_KEY');
 let supabaseKey = supabaseServiceKey || supabaseAnonKey;
+
+if (rawServiceKey && !supabaseServiceKey) {
+  console.warn('⚠️ Ignoring invalid SUPABASE_SERVICE_KEY value because it is not a valid JWT-style service-role key. Falling back to SUPABASE_ANON_KEY for live reads.');
+}
 
 console.log('🔧 Database initialization:');
 console.log('   SUPABASE_URL:', supabaseUrl ? '✓ configured' : '❌ missing');
@@ -36,7 +51,29 @@ function createSupabaseClient(key, headers = {}) {
 function setSupabaseClient(client, valid = true) {
   supabase = client;
   supabase.__isKeyValid = valid;
+  supabase.checkKeyValid = () => !!supabase.__isKeyValid;
   return supabase;
+}
+
+async function validateConnection(client) {
+  try {
+    const { data, error } = await client.from('users').select('id', { count: 'exact', head: true }).limit(1);
+    const message = (error && error.message ? error.message : '').toLowerCase();
+    const isInvalidKey = !!error && (
+      message.includes('unregistered api key') ||
+      message.includes('invalid api key') ||
+      message.includes('permission denied') ||
+      message.includes('jwt') ||
+      message.includes('row level security') ||
+      error.status === 401 ||
+      error.status === 403 ||
+      (!error.message && !data)
+    );
+
+    return { ok: !isInvalidKey, data, error };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 try {
@@ -45,61 +82,46 @@ try {
   if (supabaseServiceKey && supabaseAnonKey) {
     globalHeaders.Authorization = `Bearer ${supabaseServiceKey}`;
     globalHeaders.apikey = supabaseAnonKey;
+  } else if (supabaseAnonKey) {
+    globalHeaders.apikey = supabaseAnonKey;
   }
 
-  setSupabaseClient(createSupabaseClient(supabaseKey, globalHeaders), true);
+  const primaryClient = createSupabaseClient(supabaseKey, globalHeaders);
+  setSupabaseClient(primaryClient, true);
   console.log('✅ Supabase client initialized successfully');
-  
-  // Test connection immediately with better error diagnostics
-  (async () => {
-    try {
-      console.log('🔍 Testing Supabase connection...');
-      const { data, error } = await supabase.from('games').select('*', { count: 'exact', head: true }).limit(1);
-      
-      if (error) {
-        console.error('❌ Initial Supabase connection test FAILED:');
-        console.error('   Full Error:', JSON.stringify(error, null, 2));
-        console.error('   Message:', error.message || 'No message');
-        console.error('   Code:', error.code || 'No code');
-        console.error('   Status:', error.status || 'No status');
-        console.error('   Hint:', error.hint || 'No hint');
-        console.error('   Details:', error.details || 'No details');
 
-        // Detect common Supabase key issues and mark client as invalid
-        const msg = (error.message || '').toLowerCase();
-        const isInvalidKey = msg.includes('unregistered api key') || msg.includes('invalid api key') || msg.includes('permission denied') || error.status === 401 || error.status === 403;
-        if (isInvalidKey) {
-          supabase.__isKeyValid = false;
-          console.error('\n🚨 Supabase API key appears to be invalid or unregistered.');
-          console.error('   Please check SUPABASE_SERVICE_KEY / SUPABASE_ANON_KEY in your environment or .env file.');
-          console.error('   If this is a deployment (Vercel), update the project environment variables and redeploy.\n');
+  async function initializeSupabaseHealth() {
+    const primaryCheck = await validateConnection(primaryClient);
 
-          if (supabaseServiceKey && supabaseAnonKey && supabaseKeyType === 'SERVICE_KEY') {
-            console.warn('⚠️ Service key validation failed. Falling back to SUPABASE_ANON_KEY for read-only operations.');
-            supabaseKey = supabaseAnonKey;
-            supabaseKeyType = 'ANON_KEY';
-            setSupabaseClient(createSupabaseClient(supabaseKey, { 'x-connection-pool': 'true' }), true);
-            console.log('✅ Fallen back to SUPABASE_ANON_KEY');
-            supabase.__isKeyValid = true;
-          }
-        }
-      } else {
-        console.log('✅ Initial Supabase connection test PASSED');
-        console.log('   Tables accessible: games table is reachable');
-        supabase.__isKeyValid = true;
-      }
-    } catch (err) {
-      console.error('❌ Connection test exception:', err.message || err);
-      console.error('   Stack:', err.stack);
-      console.error('   Type:', err.constructor.name);
+    if (primaryCheck.ok) {
+      console.log('✅ Initial Supabase connection test PASSED');
+      return;
     }
-  })();
+
+    if (supabaseAnonKey && supabaseKey !== supabaseAnonKey) {
+      const anonClient = createSupabaseClient(supabaseAnonKey, { 'x-connection-pool': 'true' });
+      const anonCheck = await validateConnection(anonClient);
+
+      if (anonCheck.ok) {
+        supabaseKey = supabaseAnonKey;
+        supabaseKeyType = 'ANON_KEY';
+        setSupabaseClient(anonClient, true);
+        console.warn('⚠️ Service key rejected or invalid; falling back to SUPABASE_ANON_KEY for read-only access.');
+        console.log('✅ Switched active Supabase client to ANON_KEY');
+      } else {
+        console.error('❌ Initial Supabase connection test FAILED:');
+        console.error('   Primary key error:', JSON.stringify(primaryCheck.error || {}, null, 2));
+        console.error('   Anonymous fallback error:', JSON.stringify(anonCheck.error || {}, null, 2));
+      }
+    }
+  }
+
+  initializeSupabaseHealth().catch((error) => {
+    console.error('❌ Supabase validation failed:', error);
+  });
 } catch (error) {
   console.error('❌ Supabase initialization FAILED:', error.message);
   console.warn('   Games API will return empty results');
 }
-
-// Helper to check whether the Supabase key validated at startup
-supabase.checkKeyValid = () => !!supabase.__isKeyValid;
 
 module.exports = supabase;

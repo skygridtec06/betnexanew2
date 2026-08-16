@@ -20,13 +20,16 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 const defaultAllowedOrigins = [
+  'https://betnexa.co.ke',
+  'https://www.betnexa.co.ke',
   'https://betnexa-globalfront.vercel.app',
   'https://betnexa-globalfront-phi.vercel.app',
+  'https://betnexa-globalfront-q7uslqqs9-betnexa-august.vercel.app',
   'https://betnexa-globalfront-py1w8i4ic-betnexa-august.vercel.app',
   'https://betnexanew.vercel.app',
   'https://betnexanew2.vercel.app',
-  'https://betnexa.co.ke',
-  'https://www.betnexa.co.ke',
+  'https://www.betnexabackend.co.ke',
+  'https://betnexabackend.co.ke',
   'http://localhost:8080',
   'http://localhost:3000',
 ];

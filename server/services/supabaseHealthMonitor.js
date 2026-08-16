@@ -148,10 +148,12 @@ class SupabaseHealthMonitor {
         }
       }
 
-      // Test database with a simple query (avoid unsupported .timeout() on this Supabase client)
+      // Test database with a lightweight read query that works with the anon client.
+      // Using count-based queries can fail on RLS-enabled tables even when the DB is reachable.
       const { data, error } = await supabase
         .from('users')
-        .select('count', { count: 'exact', head: true });
+        .select('id')
+        .limit(1);
 
       const responseTime = Date.now() - startTime;
       this.services[service].responseTime = responseTime;
