@@ -20,10 +20,13 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 const defaultAllowedOrigins = [
-  'https://betnexa-globalfront.vercel.app', // Only allow your new frontend
-  'https://betnexa-globalfront-lidnelk02-1589s-projects.vercel.app', // Vercel preview alias
-  'https://betnexa.co.ke', // Custom domain
-  'https://www.betnexa.co.ke', // Custom domain with www
+  'https://betnexa-globalfront.vercel.app',
+  'https://betnexa-globalfront-phi.vercel.app',
+  'https://betnexa-globalfront-py1w8i4ic-betnexa-august.vercel.app',
+  'https://betnexanew.vercel.app',
+  'https://betnexanew2.vercel.app',
+  'https://betnexa.co.ke',
+  'https://www.betnexa.co.ke',
   'http://localhost:8080',
   'http://localhost:3000',
 ];
