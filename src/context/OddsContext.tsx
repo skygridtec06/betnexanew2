@@ -94,15 +94,9 @@ export function OddsProvider({ children }: { children: ReactNode }) {
       
       console.log('ðŸ”„ Fetching fresh games from:', apiUrl);
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 second timeout
-
       const response = await fetch(`${apiUrl}/admin/games`, {
-        signal: controller.signal,
         keepalive: true,
       });
-
-      clearTimeout(timeoutId);
 
       console.log('ðŸ“Š Fetch response status:', response.status);
 
@@ -162,9 +156,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
         setLoadError(null); // Don't block app from loading
       }
     } catch (error: any) {
-      if (error.name === 'AbortError') {
-        console.warn('â±ï¸ Game fetch timeout (10s)');
-      } else {
+      if (error?.name !== 'AbortError') {
         console.error('âŒ Error fetching games:', error);
       }
       setLoadError(null); // Don't block app from loading
@@ -227,9 +219,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
       if (backendGames.length > 0) {
         try {
           const gameIds = backendGames.map(g => g.id).join(',');
-          const response = await fetch(`${apiUrl}/api/admin/games/times/batch?ids=${encodeURIComponent(gameIds)}`, {
-            signal: AbortSignal.timeout(3000),
-          });
+          const response = await fetch(`${apiUrl}/api/admin/games/times/batch?ids=${encodeURIComponent(gameIds)}`);
 
           if (response.ok) {
             const data = await response.json();
@@ -319,15 +309,9 @@ export function OddsProvider({ children }: { children: ReactNode }) {
       const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
       
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-        
         const response = await fetch(`${apiUrl}/api/admin/games`, {
-          signal: controller.signal,
           keepalive: true,
         });
-        
-        clearTimeout(timeoutId);
         
         if (response.ok) {
           const data = await response.json();
@@ -497,9 +481,7 @@ export function OddsProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch (error: any) {
-      if (error.name === 'AbortError') {
-        console.warn('â±ï¸ Game refresh timeout (10s)');
-      } else {
+      if (error?.name !== 'AbortError') {
         console.error('âŒ Error refreshing games:', error);
       }
     }
