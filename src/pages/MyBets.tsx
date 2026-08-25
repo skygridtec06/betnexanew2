@@ -12,6 +12,7 @@ import { useUser } from "@/context/UserContext";
 import { calculateMatchMinute } from "@/lib/gameTimeCalculator";
 import { validateBetOutcome } from "@/lib/betOutcomeValidator";
 import { formatKickoffTimeEAT } from "@/lib/timeFormatter";
+import { formatDateTimeForDisplayEAT } from "@/lib/timezoneFormatter";
 import {
   Share2,
   RotateCcw,
@@ -34,12 +35,9 @@ function getPlacedDateTimeEAT(createdAt?: string, fallbackDate?: string, fallbac
 
   try {
     if (createdAt) {
-      const d = new Date(createdAt);
-      if (!isNaN(d.getTime())) {
-        const eat = addThreeHoursToDate(d);
-        const date = `${String(eat.getUTCDate()).padStart(2, '0')}/${String(eat.getUTCMonth() + 1).padStart(2, '0')}/${eat.getUTCFullYear()}`;
-        const time = format12h(eat.getUTCHours(), eat.getUTCMinutes());
-        return { date, time };
+      const formatted = formatDateTimeForDisplayEAT(createdAt);
+      if (formatted.date !== 'N/A' && formatted.time !== 'N/A') {
+        return formatted;
       }
     }
 
@@ -327,7 +325,7 @@ export default function MyBets() {
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="outline">#{bet.betId}</Badge>
                   <span className="text-xs text-muted-foreground">
-                    {bet.date} {bet.time} UTC
+                    {bet.date} {bet.time} EAT
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -425,7 +423,7 @@ export default function MyBets() {
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground">
-              Prematch Bet placed on {bet.date} at {bet.time} UTC
+              Prematch Bet placed on {bet.date} at {bet.time} EAT
             </p>
           </div>
 

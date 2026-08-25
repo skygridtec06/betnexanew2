@@ -159,6 +159,40 @@ export const formatDateInEAT = (dateInput: string | Date | undefined | null): st
 };
 
 /**
+ * Format a UTC ISO datetime for display in East African Time.
+ * Returns both the date and time separately for bet history screens.
+ */
+export const formatDateTimeForDisplayEAT = (dateTime: string | undefined | null): { date: string; time: string } => {
+  if (!dateTime) {
+    return { date: 'N/A', time: 'N/A' };
+  }
+
+  try {
+    const utcDate = new Date(dateTime);
+    if (isNaN(utcDate.getTime())) {
+      return { date: 'N/A', time: 'N/A' };
+    }
+
+    const eatDate = new Date(utcDate.getTime() + 3 * 60 * 60 * 1000);
+    const date = `${String(eatDate.getUTCDate()).padStart(2, '0')}/${String(eatDate.getUTCMonth() + 1).padStart(2, '0')}/${eatDate.getUTCFullYear()}`;
+
+    let hours = eatDate.getUTCHours();
+    const minutes = String(eatDate.getUTCMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+
+    return {
+      date,
+      time: `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`,
+    };
+  } catch (error) {
+    console.warn('⚠️ Error formatting bet timestamp in EAT:', error);
+    return { date: 'N/A', time: 'N/A' };
+  }
+};
+
+/**
  * Convert a transaction date string to EAT format (UTC+3)
  * Handles locale strings like "26/2/2026, 11:49 AM"
  */
