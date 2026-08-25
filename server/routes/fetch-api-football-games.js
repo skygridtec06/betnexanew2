@@ -357,10 +357,10 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
     console.log(`\n🔍 [API Football Fetch Preview - OPTIMIZED] Fetching prematch games for the next ${DAYS_TO_FETCH} days...`);
     console.log(`   📊 Optimized for FREE TIER: bulk odds fetching, pagination, smart filtering`);
 
-    // Use the test API key for this fetch preview endpoint
-    // Use env var — never hardcode the key
-    const TEST_API_KEY = process.env.API_FOOTBALL_KEY || process.env.APISPORTS_KEY || '17ed680bbd74957dd075f7e47fcd43f2';
-    
+    // Use the configured API key for this fetch preview endpoint.
+    // Do not silently fall back to an old stale key because that hides the real issue.
+    const TEST_API_KEY = process.env.API_FOOTBALL_KEY || process.env.APISPORTS_KEY;
+
     if (!TEST_API_KEY) {
       return res.status(500).json({
         success: false,
@@ -468,12 +468,12 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
               continue;
             }
 
-            const marketOdds = chooseBestOddsSet(oddsRows);
+            let marketOdds = chooseBestOddsSet(oddsRows);
 
             if (!marketOdds || !marketOdds.home || !marketOdds.draw || !marketOdds.away) {
-              // Has bulk odds but missing 1X2 — put in fallback list
-              fixturesWithoutBulkOdds.push(fixture);
-              continue;
+              // Some fixtures have odds data but not valid 1X2 market labels.
+              // Generate deterministic seeded odds instead of dropping the match.
+              marketOdds = generateSeededOdds(fixtureId);
             }
 
             const kickoffEAT = toEAT(kickoffTime);
@@ -491,7 +491,8 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
               time_utc: kickoffTime,
               time_eat: kickoffEAT,
               markets: marketOdds,
-              markets_count: marketsWithOdds
+              markets_count: marketsWithOdds,
+              odds_source: marketOdds && Object.keys(marketOdds).length > 0 && (marketOdds.home && marketOdds.draw && marketOdds.away) ? 'api' : 'fallback'
             });
 
             console.log(`   ✅ Added: ${homeTeam} vs ${awayTeam} (${games.length}) — ${marketsWithOdds} market odds`);

@@ -458,7 +458,7 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
                   <Card key={event.id} className="border-primary/20 bg-card/50 p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 flex-1">
-                        <span className="text-lg">{getEventIcon(event.event_type)}</span>
+                        <span className="emoji text-lg leading-none">{getEventIcon(event.event_type)}</span>
                         <div>
                           <p className="font-semibold">{getEventLabel(event.event_type)}</p>
                           <p className="text-xs text-muted-foreground">

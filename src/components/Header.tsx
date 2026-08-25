@@ -85,7 +85,7 @@ export function Header() {
                   : "text-muted-foreground hover:text-foreground hover:bg-secondary"
               }`}
             >
-              <span>{sport.emoji}</span>
+              <span className="emoji inline-block leading-none">{sport.emoji}</span>
               {sport.name}
             </Link>
           ))}
@@ -216,7 +216,7 @@ export function Header() {
                         : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                     }`}
                   >
-                    <span>{sport.emoji}</span>
+                    <span className="emoji inline-block leading-none">{sport.emoji}</span>
                     {sport.name}
                   </Link>
                 ))}

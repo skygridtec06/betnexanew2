@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800;900&family=Rajdhani:wght@400;500;600;700&family=Noto+Color+Emoji&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -51,9 +49,9 @@
     --sidebar-border: 220 14% 18%;
     --sidebar-ring: 142 72% 45%;
 
-    --font-display: 'Rajdhani', sans-serif;
-    --font-body: 'DM Sans', sans-serif;
-    --font-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", "Segoe UI Symbol", "Android Emoji", sans-serif;
+    --font-display: "Segoe UI", "Tahoma", "Arial", sans-serif;
+    --font-body: "Segoe UI", "Tahoma", "Arial", sans-serif;
+    --font-emoji: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Twemoji Mozilla", "Segoe UI Symbol", "Android Emoji", sans-serif;
   }
 
   :root.light {
@@ -122,10 +120,11 @@
   }
 
   .emoji, .emoji-icon, [data-emoji], span[aria-label*="emoji"], .sport-emoji {
-    font-family: var(--font-emoji);
+    font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Twemoji Mozilla", "Segoe UI Symbol", "Android Emoji", sans-serif !important;
     font-feature-settings: "emoji" 1;
     font-variant-emoji: emoji;
     line-height: 1.2;
+    letter-spacing: normal;
   }
 }
 

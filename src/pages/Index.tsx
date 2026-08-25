@@ -317,7 +317,7 @@ const Index = ({ sport = 'football' }: IndexProps) => {
             onClick={() => setActiveView("hot")}
             className="w-full text-xs sm:text-sm"
           >
-            <span className="mr-1">🔥</span>
+            <span className="emoji mr-1 inline-block leading-none">🔥</span>
             Hot
           </Button>
           <Button
@@ -378,8 +378,8 @@ const Index = ({ sport = 'football' }: IndexProps) => {
           <div className="mb-10">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="font-display text-xl font-bold uppercase tracking-wider text-foreground">
-                <span className="mr-2 inline text-lg">🔥</span>
-                Hot Matches 🔥
+                <span className="emoji mr-2 inline-block text-lg leading-none">🔥</span>
+                Hot Matches <span className="emoji inline-block leading-none">🔥</span>
               </h2>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
