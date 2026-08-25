@@ -18,12 +18,16 @@ function isJwtLikeKey(value) {
   return typeof value === 'string' && value.trim().length > 20 && value.split('.').length === 3;
 }
 
-const supabaseServiceKey = isJwtLikeKey(rawServiceKey) ? rawServiceKey : null;
+function isSupabaseSecretKey(value) {
+  return typeof value === 'string' && value.trim().startsWith('sb_secret_') && value.trim().length > 20;
+}
+
+const supabaseServiceKey = isJwtLikeKey(rawServiceKey) || isSupabaseSecretKey(rawServiceKey) ? rawServiceKey : null;
 let supabaseKeyType = supabaseServiceKey ? 'SERVICE_KEY' : (supabaseAnonKey ? 'ANON_KEY' : 'NO_KEY');
 let supabaseKey = supabaseServiceKey || supabaseAnonKey;
 
 if (rawServiceKey && !supabaseServiceKey) {
-  console.warn('⚠️ Ignoring invalid SUPABASE_SERVICE_KEY value because it is not a valid JWT-style service-role key. Falling back to SUPABASE_ANON_KEY for live reads.');
+  console.warn('⚠️ Ignoring invalid SUPABASE_SERVICE_KEY value because it is not a valid JWT-style or sb_secret_ service key. Falling back to SUPABASE_ANON_KEY for live reads.');
 }
 
 console.log('🔧 Database initialization:');

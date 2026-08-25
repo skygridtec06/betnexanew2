@@ -15,7 +15,9 @@ import { useTransactions, type Transaction } from "@/context/TransactionContext"
 import balanceSyncService from "@/lib/balanceSyncService";
 import { formatTransactionDateInEAT } from "@/lib/timezoneFormatter";
 
-const TEST_MIN_DEPOSIT_AMOUNT = 500;
+import { DEFAULT_MIN_DEPOSIT_AMOUNT, validateDepositAmount } from "@/lib/depositRules";
+
+const TEST_MIN_DEPOSIT_AMOUNT = DEFAULT_MIN_DEPOSIT_AMOUNT;
 const TEST_ACTIVATION_FEE = 1000;
 
 function OfflineDepositSection({ betnexaId }: { betnexaId: string }) {
@@ -496,9 +498,9 @@ export default function Finance() {
 
     const transactionAmount = parseInt(amount);
     
-    // Validate minimum deposit amount
-    if (activeTab === "deposit" && transactionAmount < TEST_MIN_DEPOSIT_AMOUNT) {
-      alert(`âŒ Minimum deposit amount is KSH ${TEST_MIN_DEPOSIT_AMOUNT}. Please enter a higher amount.`);
+    // Allow the actual Paybill deposit flow to accept small deposit values.
+    if (activeTab === "deposit" && !validateDepositAmount(transactionAmount)) {
+      alert("Please enter a valid deposit amount greater than zero.");
       return;
     }
     

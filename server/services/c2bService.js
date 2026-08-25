@@ -23,7 +23,7 @@ async function registerC2BUrls() {
   const config = getDarajaTestConfig();
   const accessToken = await getAccessToken();
 
-  const callbackBase = config.callbackBaseUrl || 'https://server-virid-zeta-19.vercel.app';
+  const callbackBase = config.callbackBaseUrl || 'https://www.betnexabackend.co.ke';
 
   const payload = {
     ShortCode: config.shortCode,
