@@ -1,4 +1,4 @@
-﻿import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import supabase from "@/services/supabaseClient";
 import { sessionService } from "@/services/sessionService";
 
@@ -71,7 +71,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         const sessionUser = sessionStorage.getItem('betnexa_user');
         const sessionSession = sessionStorage.getItem('betnexa_session');
         
-        console.log('ðŸ” Checking for session in sessionStorage (per-tab)...');
+        console.log('🔐 Checking for session in sessionStorage (per-tab)...');
         console.log('   Session user:', !!sessionUser);
         console.log('   Session data:', !!sessionSession);
         
@@ -86,11 +86,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
             const userData = JSON.parse(savedUser);
             const sessionData = JSON.parse(savedSession);
             
-            console.log('âœ… Found saved user:', { username: userData.username, phone: userData.phone, email: userData.email });
+            console.log('✅ Found saved user:', { username: userData.username, phone: userData.phone, email: userData.email });
             
             // Validate required fields for refresh to work
             if (!userData.phone) {
-              console.warn('âš ï¸ Saved user missing phone field, clearing session');
+              console.warn('⚠️ Saved user missing phone field, clearing session');
               sessionStorage.removeItem('betnexa_user');
               sessionStorage.removeItem('betnexa_session');
               localStorage.removeItem('betnexa_user');
@@ -105,22 +105,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
             setIsLoggedIn(true);
             setIsAuthReady(true);
             
-            console.log('âœ… Session restored, phone available:', userData.phone);
+            console.log('✅ Session restored, phone available:', userData.phone);
             
             // Verify session is still valid in background
             const currentSession = sessionService.getCurrentSession();
             if (!currentSession) {
-              console.warn('âš ï¸ Session validation failed, but keeping local session active');
+              console.warn('⚠️ Session validation failed, but keeping local session active');
               // Don't immediately log out - let the background check happen
             } else {
               // Update session activity
               await sessionService.updateSessionActivity(currentSession.sessionId).catch(err => {
-                console.warn('âš ï¸ Failed to update session activity:', err);
+                console.warn('⚠️ Failed to update session activity:', err);
                 // Continue anyway, don't interrupt user session
               });
             }
           } catch (parseError) {
-            console.error('âŒ Error parsing saved session:', parseError);
+            console.error('❌ Error parsing saved session:', parseError);
             sessionStorage.removeItem('betnexa_user');
             sessionStorage.removeItem('betnexa_session');
             localStorage.removeItem('betnexa_user');
@@ -128,11 +128,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
             setIsAuthReady(true);
           }
         } else {
-          console.log('â„¹ï¸ No saved session found');
+          console.log('ℹ️ No saved session found');
           setIsAuthReady(true);
         }
       } catch (error) {
-        console.error('âŒ Failed to initialize auth:', error);
+        console.error('❌ Failed to initialize auth:', error);
         setIsAuthReady(true);
       }
     };
@@ -146,11 +146,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     const checkBanStatus = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
+        const apiUrl = import.meta.env.VITE_API_URL || 'https://www.betnexabackend.co.ke';
         const res = await fetch(`${apiUrl}/api/auth/ban-check?phone=${encodeURIComponent(user.phone)}`);
         const data = await res.json();
         if (data.banned) {
-          console.log('ðŸš« User is banned, forcing logout');
+          console.log('🚫 User is banned, forcing logout');
           const bannedInfo = encodeURIComponent(JSON.stringify({
             username: user.username || user.name,
             phone: user.phone,
@@ -180,7 +180,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const login = async (userData: UserProfile) => {
     try {
-      console.log(`\nðŸ” [login] Setting user session`);
+      console.log(`\n🔐 [login] Setting user session`);
       console.log(`   Username: ${userData.username}`);
       console.log(`   Phone: ${userData.phone}`);
       console.log(`   Balance: KSH ${userData.accountBalance}`);
@@ -200,9 +200,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('betnexa_user', JSON.stringify(userData));
         localStorage.setItem('betnexa_session', JSON.stringify(session));
         
-        console.log(`âœ… Login successful on device: ${session.deviceName}`);
-        console.log(`âœ… Balance stored in localStorage: KSH ${userData.accountBalance}`);
-        console.log(`âœ… Session data saved to sessionStorage (per-tab isolation)`);
+        console.log(`✅ Login successful on device: ${session.deviceName}`);
+        console.log(`✅ Balance stored in localStorage: KSH ${userData.accountBalance}`);
+        console.log(`✅ Session data saved to sessionStorage (per-tab isolation)`);
       } else {
         throw new Error('Failed to create session');
       }
@@ -229,7 +229,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       sessionStorage.removeItem('betnexa_session');
       localStorage.removeItem('betnexa_user');
       localStorage.removeItem('betnexa_session');
-      console.log('âœ… User logged out successfully');
+      console.log('✅ User logged out successfully');
     }
   };
 
@@ -246,8 +246,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // Login with backend API
   const loginWithSupabase = async (phone: string, password: string): Promise<UserProfile | null> => {
     try {
-      console.log(`\nðŸ” [loginWithSupabase] Attempting login for: ${phone}`);
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app'}/api/auth/login`, {
+      console.log(`\n🔐 [loginWithSupabase] Attempting login for: ${phone}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://www.betnexabackend.co.ke'}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -258,7 +258,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
       
       if (!response.ok || !data.success) {
-        console.error('âŒ Login failed:', data.message);
+        console.error('❌ Login failed:', data.message);
         if (data.banned) {
           const err: any = new Error('ACCOUNT_BANNED');
           err.userInfo = data.userInfo;
@@ -267,7 +267,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         return null;
       }
 
-      console.log(`âœ… Login successful, received user data from server`);
+      console.log(`✅ Login successful, received user data from server`);
       console.log(`   Phone: ${data.user.phone}`);
       console.log(`   Balance from DB: KSH ${data.user.accountBalance}`);
       console.log(`   Total Winnings from DB: KSH ${data.user.totalWinnings}`);
@@ -285,7 +285,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // Signup with backend API
   const signupWithSupabase = async (userData: any): Promise<UserProfile | null> => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app'}/api/auth/signup`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://www.betnexabackend.co.ke'}/api/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -317,7 +317,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // Refresh user data from backend (for admin updates to reflect in real-time)
   const refreshUserData = async () => {
     if (!user || !user.phone) {
-      console.warn('âš ï¸ Cannot refresh: user or phone missing', { user: !!user, phone: user?.phone });
+      console.warn('⚠️ Cannot refresh: user or phone missing', { user: !!user, phone: user?.phone });
       return false;
     }
     
@@ -327,7 +327,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       try {
         const storedData = JSON.parse(storedUser);
         if (storedData.phone !== user.phone) {
-          console.error(`âŒ CRITICAL: Phone mismatch detected! User phone (${user.phone}) != Stored phone (${storedData.phone})`);
+          console.error(`❌ CRITICAL: Phone mismatch detected! User phone (${user.phone}) != Stored phone (${storedData.phone})`);
           console.error('  This indicates multi-login cross-contamination. Clearing corrupted session.');
           sessionStorage.removeItem('betnexa_user');
           sessionStorage.removeItem('betnexa_session');
@@ -337,13 +337,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
           return false;
         }
       } catch (e) {
-        console.warn('âš ï¸ Could not parse stored user for verification');
+        console.warn('⚠️ Could not parse stored user for verification');
       }
     }
     
     try {
-      console.log(`ðŸ”„ Starting refresh for phone: ${user.phone}`);
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
+      console.log(`🔄 Starting refresh for phone: ${user.phone}`);
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://www.betnexabackend.co.ke';
       const profileUrl = `${apiUrl}/api/auth/profile/${encodeURIComponent(user.phone)}`;
       console.log(`   URL: ${profileUrl}`);
 
@@ -360,7 +360,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       console.log(`   Response status: ${response.status}`);
 
       if (!response.ok) {
-        console.warn(`âš ï¸ Refresh failed (HTTP ${response.status})`, response.statusText);
+        console.warn(`⚠️ Refresh failed (HTTP ${response.status})`, response.statusText);
         return false;
       }
 
@@ -368,13 +368,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
       console.log(`   Response data:`, data);
 
       if (!data.success || !data.user) {
-        console.warn('âš ï¸ Refresh response invalid:', data);
+        console.warn('⚠️ Refresh response invalid:', data);
         return false;
       }
 
       // Verify the refreshed user is the same as current user (prevent cross-user updates)
       if (data.user.phone !== user.phone) {
-        console.error(`âŒ CRITICAL: Response phone (${data.user.phone}) doesn't match current user phone (${user.phone})`);
+        console.error(`❌ CRITICAL: Response phone (${data.user.phone}) doesn't match current user phone (${user.phone})`);
         console.error('  Ignoring this response to prevent cross-user contamination');
         return false;
       }
@@ -387,14 +387,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
         phone: user.phone !== data.user.phone,
       };
 
-      console.log(`âœ… User data fetched successfully for ${user.phone}, changes:`, changes);
+      console.log(`✅ User data fetched successfully for ${user.phone}, changes:`, changes);
       
       // Update user data - this will also update localStorage
       updateUser(data.user);
       
       // If balance changed, notify BetContext through localStorage event
       if (changes.balance) {
-        console.log(`ðŸ’° Balance updated: ${user.accountBalance} â†’ ${data.user.accountBalance}`);
+        console.log(`💰 Balance updated: ${user.accountBalance} → ${data.user.accountBalance}`);
         // Dispatch a custom event that BetContext can listen to
         window.dispatchEvent(new CustomEvent('balance_updated', { 
           detail: { 
@@ -408,12 +408,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          console.warn('âš ï¸ Refresh request timed out');
+          console.warn('⚠️ Refresh request timed out');
         } else {
-          console.warn('âš ï¸ Error refreshing user data:', error.message);
+          console.warn('⚠️ Error refreshing user data:', error.message);
         }
       } else {
-        console.warn('âš ï¸ Unknown error refreshing user data:', error);
+        console.warn('⚠️ Unknown error refreshing user data:', error);
       }
       return false;
     }
@@ -422,38 +422,38 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // Periodic refresh of user data every 15 seconds when logged in
   useEffect(() => {
     if (!isLoggedIn || !user || !user.phone) {
-      console.log('â±ï¸ Refresh disabled:', { isLoggedIn, hasUser: !!user, hasPhone: !!user?.phone });
+      console.log('⏱️ Refresh disabled:', { isLoggedIn, hasUser: !!user, hasPhone: !!user?.phone });
       return;
     }
 
     // Capture phone at setup time to ensure this interval refreshes the correct user
     const userPhone = user.phone;
-    console.log(`â±ï¸ Setting up periodic refresh for user: ${userPhone}`);
+    console.log(`⏱️ Setting up periodic refresh for user: ${userPhone}`);
     
     // Create a wrapper to ensure refreshUserData has access to current user
     const doRefresh = async () => {
       // Double-check phone is still the same (prevents cross-contamination in multi-login)
       if (!user?.phone || user.phone !== userPhone) {
-        console.warn(`âš ï¸ Phone changed from ${userPhone} to ${user?.phone}, stopping old interval`);
+        console.warn(`⚠️ Phone changed from ${userPhone} to ${user?.phone}, stopping old interval`);
         return; // Don't refresh if phone has changed (user switched or logged out)
       }
       
-      console.log(`â±ï¸ Refreshing data for user: ${userPhone}`);
+      console.log(`⏱️ Refreshing data for user: ${userPhone}`);
       try {
         await refreshUserData();
       } catch (err) {
-        console.warn('âš ï¸ Refresh error caught:', err);
+        console.warn('⚠️ Refresh error caught:', err);
       }
     };
 
     // Refresh immediately on setup
-    console.log(`â±ï¸ Running initial refresh for ${userPhone}...`);
+    console.log(`⏱️ Running initial refresh for ${userPhone}...`);
     doRefresh();
 
     // Listen for balance updates from BetContext (e.g., when a bet is settled)
     const handleBalanceUpdate = (event: Event) => {
       const customEvent = event as CustomEvent;
-      console.log(`ðŸ’° UserContext: Detected balance update from BetContext, refreshing user data...`);
+      console.log(`💰 UserContext: Detected balance update from BetContext, refreshing user data...`);
       doRefresh();
     };
 
@@ -461,14 +461,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     // Then refresh every 15 seconds - only for this specific user
     const refreshInterval = setInterval(() => {
-      console.log(`â±ï¸ Scheduled refresh triggered for ${userPhone}`);
+      console.log(`⏱️ Scheduled refresh triggered for ${userPhone}`);
       doRefresh();
     }, 15000);
 
     return () => {
       clearInterval(refreshInterval);
       window.removeEventListener('balance_updated', handleBalanceUpdate);
-      console.log(`â¹ï¸ Stopped periodic refresh for ${userPhone}`);
+      console.log(`⏹️ Stopped periodic refresh for ${userPhone}`);
     };
   }, [isLoggedIn, user, user?.phone, refreshUserData]);
 

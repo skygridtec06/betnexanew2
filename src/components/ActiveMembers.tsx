@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Users, Dot, RefreshCw } from "lucide-react";
@@ -32,7 +32,7 @@ export function ActiveMembers() {
   const [isOpen, setIsOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
+  const apiUrl = import.meta.env.VITE_API_URL || 'https://www.betnexabackend.co.ke';
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -41,9 +41,9 @@ export function ActiveMembers() {
         headers: { 'Content-Type': 'application/json' }
       });
       const data = await response.json();
-      console.log('âœ… Active members refreshed:', data);
+      console.log('✅ Active members refreshed:', data);
     } catch (error) {
-      console.error('âŒ Error refreshing members:', error);
+      console.error('❌ Error refreshing members:', error);
     } finally {
       setRefreshing(false);
     }

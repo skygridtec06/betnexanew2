@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -116,7 +116,7 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
   // Load events on mount
   useEffect(() => {
     const initialize = async () => {
-      console.log('ðŸ”„ [MatchEventEditor] Component mounted, adminPhone:', adminPhone ? adminPhone.substring(0, 5) + '...' : 'MISSING');
+      console.log('🔄 [MatchEventEditor] Component mounted, adminPhone:', adminPhone ? adminPhone.substring(0, 5) + '...' : 'MISSING');
       if (adminPhone) {
         await executePendingEvents();
       }
@@ -127,7 +127,7 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
   }, [gameId, adminPhone]);
 
   // Admin phone is passed as prop from AdminPortal
-  const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
+  const apiUrl = import.meta.env.VITE_API_URL || 'https://www.betnexabackend.co.ke';
 
   const executePendingEvents = async () => {
     if (!adminPhone) return;
@@ -139,7 +139,7 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        console.warn("âš ï¸ Could not execute due events", data);
+        console.warn("⚠️ Could not execute due events", data);
         setErrorMessage(data?.error || "Failed to execute pending events");
         return;
       }
@@ -162,14 +162,14 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
       setExecutionMessage(null);
       
       if (!adminPhone) {
-        console.error("âŒ Admin phone not provided to MatchEventEditor");
+        console.error("❌ Admin phone not provided to MatchEventEditor");
         setErrorMessage("Admin phone is missing. Please ensure you're logged in as admin.");
         setLoading(false);
         return;
       }
 
       const url = `${apiUrl}/api/admin/match-events/${gameId}?phone=${encodeURIComponent(adminPhone)}`;
-      console.log("ðŸ“‹ Fetching events from:", url);
+      console.log("📋 Fetching events from:", url);
       
       const response = await fetch(url, {
         method: "GET",
@@ -209,7 +209,7 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
       setErrorMessage(null);
       
       if (!adminPhone) {
-        console.error("âŒ Admin phone not provided");
+        console.error("❌ Admin phone not provided");
         setErrorMessage("Admin phone is missing. Please ensure you're logged in as admin.");
         setSubmitting(false);
         return;
@@ -225,7 +225,7 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
           return;
         }
         eventUtcIso = new Date(kickoffMs + formData.minute * 60 * 1000).toISOString();
-        console.log("ðŸŽ¯ Creating score_update event at minute", formData.minute, "â†’ UTC:", eventUtcIso);
+        console.log("🎯 Creating score_update event at minute", formData.minute, "→ UTC:", eventUtcIso);
       } else {
         if (!formData.eventDate || !formData.eventTime) {
           setErrorMessage("Please select both event date and time in EAT.");
@@ -240,7 +240,7 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
         }
 
         eventUtcIso = buildUtcIsoFromEatDateTime(formData.eventDate, formData.eventTime);
-        console.log("ðŸŽ¯ Creating event:", {
+        console.log("🎯 Creating event:", {
           eventType: formData.eventType,
           eatDate: formData.eventDate,
           eatTime: formData.eventTime,
@@ -327,17 +327,17 @@ export function MatchEventEditor({ gameId, gameName, kickoffTime, onClose, admin
   const getEventIcon = (eventType: string) => {
     switch (eventType) {
       case "kickoff":
-        return "ðŸŽ¯";
+        return "🎯";
       case "halftime":
-        return "â±ï¸";
+        return "⏱️";
       case "resume":
-        return "â–¶ï¸";
+        return "▶️";
       case "score_update":
-        return "âš½";
+        return "⚽";
       case "end":
-        return "ðŸ";
+        return "🏁";
       default:
-        return "ðŸ“Œ";
+        return "📌";
     }
   };
 

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
@@ -128,7 +128,7 @@ export default function MyBets() {
 
     const loadBetsFromServer = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
+        const apiUrl = import.meta.env.VITE_API_URL || 'https://www.betnexabackend.co.ke';
         const response = await fetch(`${apiUrl}/api/bets/user?phoneNumber=${encodeURIComponent(user.phone)}`, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
@@ -161,10 +161,10 @@ export default function MyBets() {
           }));
 
           setBets(transformedBets);
-          console.log(`âœ… Loaded ${transformedBets.length} bets from server`);
+          console.log(`✅ Loaded ${transformedBets.length} bets from server`);
         }
       } catch (error) {
-        console.error('âš ï¸ Failed to load bets from server:', error);
+        console.error('⚠️ Failed to load bets from server:', error);
       }
     };
 
@@ -244,7 +244,7 @@ export default function MyBets() {
 
     setIsUpdatingOutcome(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://www.betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/admin/bets/${betId}/selections/${selectionId}/outcome`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },

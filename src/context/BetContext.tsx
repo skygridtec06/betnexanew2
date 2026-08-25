@@ -1,4 +1,4 @@
-﻿import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 
 export interface PlacedBet {
   id: string;
@@ -55,7 +55,7 @@ export function BetProvider({ children }: { children: ReactNode }) {
         return user.accountBalance || 0;
       }
     } catch (error) {
-      console.warn('âš ï¸ Failed to initialize balance from localStorage');
+      console.warn('⚠️ Failed to initialize balance from localStorage');
     }
     return 0;
   });
@@ -68,7 +68,7 @@ export function BetProvider({ children }: { children: ReactNode }) {
         return user.stakeableBalance || user.accountBalance || 0;
       }
     } catch (error) {
-      console.warn('âš ï¸ Failed to initialize stakeable balance from localStorage');
+      console.warn('⚠️ Failed to initialize stakeable balance from localStorage');
     }
     return 0;
   });
@@ -81,7 +81,7 @@ export function BetProvider({ children }: { children: ReactNode }) {
         return user.withdrawableBalance || 0;
       }
     } catch (error) {
-      console.warn('âš ï¸ Failed to initialize withdrawable balance from localStorage');
+      console.warn('⚠️ Failed to initialize withdrawable balance from localStorage');
     }
     return 0;
   });
@@ -91,7 +91,7 @@ export function BetProvider({ children }: { children: ReactNode }) {
     const handleBalanceUpdate = (event: CustomEvent) => {
       const { newBalance } = event.detail;
       if (typeof newBalance === 'number') {
-        console.log(`ðŸ’° BetContext: Syncing balance from UserContext: ${balance} â†’ ${newBalance}`);
+        console.log(`💰 BetContext: Syncing balance from UserContext: ${balance} → ${newBalance}`);
         setBalance(newBalance);
       }
     };
@@ -131,7 +131,7 @@ export function BetProvider({ children }: { children: ReactNode }) {
   };
 
   const updateBetStatus = async (betId: string, status: PlacedBet["status"], amountWon?: number) => {
-    console.log(`\nðŸ”„ [BetContext.updateBetStatus] Starting update`);
+    console.log(`\n🔄 [BetContext.updateBetStatus] Starting update`);
     console.log(`   Bet ID: ${betId}`);
     console.log(`   New Status: ${status}`);
     console.log(`   Amount Won: ${amountWon || 'N/A'}`);
@@ -148,17 +148,17 @@ export function BetProvider({ children }: { children: ReactNode }) {
           : bet
       )
     );
-    console.log(`   âœ“ Local state updated`);
+    console.log(`   ✓ Local state updated`);
 
     // Do not credit main balance locally on Won; backend controls wallet settlement.
 
     // Now sync with backend database
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://www.betnexabackend.co.ke';
       const endpoint = `${apiUrl}/api/bets/${betId}/status`;
       
-      console.log(`   ðŸ“¡ Calling API: PUT ${endpoint}`);
-      console.log(`   ðŸ“¦ Request body: { status: "${status}", amountWon: ${amountWon || 0} }`);
+      console.log(`   📡 Calling API: PUT ${endpoint}`);
+      console.log(`   📦 Request body: { status: "${status}", amountWon: ${amountWon || 0} }`);
       
       const response = await fetch(endpoint, {
         method: 'PUT',
@@ -169,25 +169,25 @@ export function BetProvider({ children }: { children: ReactNode }) {
         })
       });
 
-      console.log(`   ðŸ“¥ API Response status: ${response.status}`);
+      console.log(`   📥 API Response status: ${response.status}`);
       const data = await response.json();
-      console.log(`   ðŸ“¥ API Response data:`, data);
+      console.log(`   📥 API Response data:`, data);
 
       if (!response.ok) {
-        console.error(`   âŒ API returned error: ${data.error}`);
+        console.error(`   ❌ API returned error: ${data.error}`);
         return {
           success: false,
           error: data.error || 'Failed to update bet status'
         };
       }
 
-      console.log(`   âœ… Bet ${betId} status updated to ${status} in database`);
+      console.log(`   ✅ Bet ${betId} status updated to ${status} in database`);
       
       // If bet won and we have updated user data, sync the balance
       if (status === 'Won' && data.updatedUser && data.updatedUser.account_balance !== undefined) {
         const serverBalance = data.updatedUser.account_balance;
-        console.log(`   ðŸ’¾ Server returned updated balance: KSH ${serverBalance}`);
-        console.log(`   âœ“ Syncing server balance to local state`);
+        console.log(`   💾 Server returned updated balance: KSH ${serverBalance}`);
+        console.log(`   ✓ Syncing server balance to local state`);
         
         // Update local balance with server value to ensure consistency
         setBalance(serverBalance);
@@ -201,10 +201,10 @@ export function BetProvider({ children }: { children: ReactNode }) {
             user.totalWinnings = data.updatedUser.total_winnings || user.totalWinnings || 0;
             sessionStorage.setItem('betnexa_user', JSON.stringify(user));
             localStorage.setItem('betnexa_user', JSON.stringify(user));
-            console.log(`   âœ… localStorage updated with new balance: KSH ${serverBalance}`);
+            console.log(`   ✅ localStorage updated with new balance: KSH ${serverBalance}`);
           }
         } catch (e) {
-          console.warn('   âš ï¸ Could not update localStorage:', e);
+          console.warn('   ⚠️ Could not update localStorage:', e);
         }
 
         // Dispatch event for UserContext to refresh - this ensures all contexts are in sync
@@ -214,9 +214,9 @@ export function BetProvider({ children }: { children: ReactNode }) {
             totalWinnings: data.updatedUser.total_winnings
           }
         }));
-        console.log(`   ðŸ“¢ Dispatched balance_updated event`);
+        console.log(`   📢 Dispatched balance_updated event`);
         
-        console.log(`   âœ… Synced main balance from server after status update. New balance: KSH ${serverBalance}`);
+        console.log(`   ✅ Synced main balance from server after status update. New balance: KSH ${serverBalance}`);
       }
 
       return {
@@ -224,7 +224,7 @@ export function BetProvider({ children }: { children: ReactNode }) {
         data
       };
     } catch (error) {
-      console.error('   âŒ Error syncing bet status to database:', error);
+      console.error('   ❌ Error syncing bet status to database:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -246,7 +246,7 @@ export function BetProvider({ children }: { children: ReactNode }) {
 
   const fetchAllBets = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://www.betnexabackend.co.ke';
       const response = await fetch(`${apiUrl}/api/bets/admin/all?t=${Date.now()}`, {
         headers: { 'Content-Type': 'application/json' },
         cache: 'no-store'
@@ -272,12 +272,12 @@ export function BetProvider({ children }: { children: ReactNode }) {
         }));
 
         setBets(transformedBets);
-        console.log(`âœ… Loaded ${transformedBets.length} bets from backend`);
+        console.log(`✅ Loaded ${transformedBets.length} bets from backend`);
         return { success: true };
       }
       return { success: false, error: data.error };
     } catch (error) {
-      console.error('âŒ Error fetching all bets:', error);
+      console.error('❌ Error fetching all bets:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   };

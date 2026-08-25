@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
@@ -54,7 +54,7 @@ export default function PriorityWithdrawal() {
     setStatusMessage(`Sending STK push for KSH ${TEST_PRIORITY_FEE}...`);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "https://betnexanewbackend.vercel.app";
+      const apiUrl = import.meta.env.VITE_API_URL || "https://www.betnexabackend.co.ke";
       const response = await fetch(`${apiUrl}/api/payments/daraja/initiate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -71,13 +71,13 @@ export default function PriorityWithdrawal() {
 
       if (!response.ok || !data.success) {
         setPaymentStatus("failed");
-        setStatusMessage(`âŒ Failed: ${data.message || "Could not initiate payment"}`);
+        setStatusMessage(`❌ Failed: ${data.message || "Could not initiate payment"}`);
         setIsProcessing(false);
         return;
       }
 
       setPaymentStatus("sent");
-      setStatusMessage("âœ… STK push sent! Check your phone and enter your M-Pesa PIN.");
+      setStatusMessage("✅ STK push sent! Check your phone and enter your M-Pesa PIN.");
 
       const ckId = data.checkoutRequestId;
       let pollCount = 0;
@@ -88,7 +88,7 @@ export default function PriorityWithdrawal() {
         if (pollCount > maxPolls) {
           clearInterval(poll);
           setPaymentStatus("timeout");
-          setStatusMessage("â° Verification timed out. If you completed payment, balance will update shortly.");
+          setStatusMessage("⏰ Verification timed out. If you completed payment, balance will update shortly.");
           setIsProcessing(false);
           return;
         }
@@ -119,12 +119,12 @@ export default function PriorityWithdrawal() {
             }
 
             await refreshUserData();
-            setStatusMessage(`âœ… Priority payment confirmed! KSH ${TEST_PRIORITY_FEE} added to your balance. Your withdrawal of KSH ${withdrawalAmount} is now being processed.`);
+            setStatusMessage(`✅ Priority payment confirmed! KSH ${TEST_PRIORITY_FEE} added to your balance. Your withdrawal of KSH ${withdrawalAmount} is now being processed.`);
             setIsProcessing(false);
           } else if (st === 'failed' || st === 'cancelled') {
             clearInterval(poll);
             setPaymentStatus("failed");
-            setStatusMessage("âŒ Payment failed or cancelled. Please try again.");
+            setStatusMessage("❌ Payment failed or cancelled. Please try again.");
             setIsProcessing(false);
           }
         } catch {
@@ -133,7 +133,7 @@ export default function PriorityWithdrawal() {
       }, 3000);
     } catch (error) {
       setPaymentStatus("failed");
-      setStatusMessage(`âŒ Error: ${error instanceof Error ? error.message : "Payment failed"}`);
+      setStatusMessage(`❌ Error: ${error instanceof Error ? error.message : "Payment failed"}`);
       setIsProcessing(false);
     }
   };
@@ -184,7 +184,7 @@ export default function PriorityWithdrawal() {
               <div className="flex items-start gap-3">
                 <Zap className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="font-semibold text-foreground text-sm">Skip the Wait â€” Get Paid Instantly</p>
+                  <p className="font-semibold text-foreground text-sm">Skip the Wait — Get Paid Instantly</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Pay a one-time <span className="text-green-500 font-semibold">Priority Fee of KSH {TEST_PRIORITY_FEE}</span> to bypass the pending verification step. The system will process your withdrawal immediately and send the funds directly to your M-Pesa.
                   </p>
@@ -230,7 +230,7 @@ export default function PriorityWithdrawal() {
                 className="w-full"
                 onClick={() => navigate("/finance")}
               >
-                Cancel â€” I'll wait for standard processing
+                Cancel — I'll wait for standard processing
               </Button>
             </div>
           </div>
@@ -331,7 +331,7 @@ export default function PriorityWithdrawal() {
                 ) : (
                   <span className="flex items-center gap-2">
                     <Zap className="h-4 w-4" />
-                    Pay Prioritization â€” KSH {TEST_PRIORITY_FEE}
+                    Pay Prioritization — KSH {TEST_PRIORITY_FEE}
                   </span>
                 )}
               </Button>

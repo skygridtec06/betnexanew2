@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Loader2, Download, CheckCircle, AlertCircle } from 'lucide-react';
@@ -32,7 +32,7 @@ export const FetchGamesFetchModal = ({ isOpen, onClose, onExecute }: FetchGamesF
     setStep('fetching');
     setErrorMsg('');
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://betnexanewbackend.vercel.app';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://www.betnexabackend.co.ke';
       const adminPhone = localStorage.getItem("adminPhone") || localStorage.getItem("userPhone") || "0712345678";
       
       const response = await fetch(`${apiUrl}/api/admin/fetch-api-football/fetch-preview`, {
@@ -116,7 +116,7 @@ export const FetchGamesFetchModal = ({ isOpen, onClose, onExecute }: FetchGamesF
             <div className="space-y-4">
               <div className="bg-blue-500/10 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                 <p className="text-lg font-semibold text-blue-700 dark:text-blue-300">
-                  âœ… Fetched {games.length} games
+                  ✅ Fetched {games.length} games
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
                   {games.length === 100 ? '(Maximum limit reached)' : `(${games.length} of max 100)`}
@@ -173,7 +173,7 @@ export const FetchGamesFetchModal = ({ isOpen, onClose, onExecute }: FetchGamesF
             <div className="space-y-4">
               <div className="bg-yellow-500/10 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                 <p className="text-lg font-semibold text-yellow-700 dark:text-yellow-300">
-                  â„¹ï¸ No games found
+                  ℹ️ No games found
                 </p>
                 <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
                   No prematch games with valid odds were found for today.
