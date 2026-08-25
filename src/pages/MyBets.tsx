@@ -313,7 +313,7 @@ export default function MyBets() {
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="outline">#{bet.betId}</Badge>
                   <span className="text-xs text-muted-foreground">
-                    {bet.date} {bet.time} EAT
+                    {bet.date} {bet.time} UTC
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -411,7 +411,7 @@ export default function MyBets() {
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground">
-              Prematch Bet placed on {bet.date} at {bet.time} EAT
+              Prematch Bet placed on {bet.date} at {bet.time} UTC
             </p>
           </div>
 

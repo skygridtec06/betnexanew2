@@ -173,29 +173,19 @@ export const formatDateTimeForDisplayEAT = (dateTime: string | undefined | null)
       return { date: 'N/A', time: 'N/A' };
     }
 
-    const dateFormatter = new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Africa/Nairobi',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-
-    const timeFormatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Africa/Nairobi',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
-
-    const date = dateFormatter.format(parsedDate);
-    const time = timeFormatter.format(parsedDate);
+    const date = `${String(parsedDate.getUTCDate()).padStart(2, '0')}/${String(parsedDate.getUTCMonth() + 1).padStart(2, '0')}/${parsedDate.getUTCFullYear()}`;
+    let hours = parsedDate.getUTCHours();
+    const minutes = String(parsedDate.getUTCMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
 
     return {
       date,
-      time,
+      time: `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`,
     };
   } catch (error) {
-    console.warn('⚠️ Error formatting bet timestamp in EAT:', error);
+    console.warn('⚠️ Error formatting bet timestamp in UTC:', error);
     return { date: 'N/A', time: 'N/A' };
   }
 };
