@@ -326,6 +326,17 @@ export const supabaseService = {
       // Create bet record
       const betId = `BET${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
       const now = new Date();
+      const eatFormatter = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Africa/Nairobi',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+      const eatParts = eatFormatter.formatToParts(now);
+      const eatMap = Object.fromEntries(eatParts.filter((p) => p.type !== 'literal').map((p) => [p.type, p.value]));
 
       const { data: bet, error: betError } = await supabase
         .from('bets')
@@ -336,8 +347,8 @@ export const supabaseService = {
           potential_win: parseFloat(betData.potentialWin),
           total_odds: parseFloat(betData.totalOdds),
           status: 'Open',
-          bet_date: `${now.getDate()}/${now.getMonth() + 1}`,
-          bet_time: `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`
+          bet_date: `${eatMap.day}/${eatMap.month}/${eatMap.year}`,
+          bet_time: `${eatMap.hour}:${eatMap.minute}`
         }])
         .select()
         .single();

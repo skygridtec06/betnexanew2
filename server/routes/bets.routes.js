@@ -177,9 +177,22 @@ router.post('/place', async (req, res) => {
       });
     }
 
-    // Create bet record
+    // Create bet record in East Africa Time (UTC+3)
     const betId = `BET${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
     const now = new Date();
+    const eatFormatter = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Africa/Nairobi',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    const eatParts = eatFormatter.formatToParts(now);
+    const eatMap = Object.fromEntries(eatParts.filter((p) => p.type !== 'literal').map((p) => [p.type, p.value]));
+    const eatDate = `${eatMap.day}/${eatMap.month}/${eatMap.year}`;
+    const eatTime = `${eatMap.hour}:${eatMap.minute}`;
     const isoTimestamp = now.toISOString(); // Store as ISO for proper timezone conversion
 
     const { data: bet, error: betError } = await supabase
@@ -191,8 +204,8 @@ router.post('/place', async (req, res) => {
         potential_win: parseFloat(potentialWin),
         total_odds: parseFloat(totalOdds),
         status: 'Open',
-        bet_date: `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`,
-        bet_time: `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`,
+        bet_date: eatDate,
+        bet_time: eatTime,
         created_at: isoTimestamp
       }])
       .select()

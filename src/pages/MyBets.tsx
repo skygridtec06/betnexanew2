@@ -42,42 +42,10 @@ function getPlacedDateTimeEAT(createdAt?: string, fallbackDate?: string, fallbac
     }
 
     if (fallbackDate && fallbackTime) {
-      const dateParts = fallbackDate.split('/').map((p) => parseInt(p, 10));
-      const timeMatch = String(fallbackTime).trim().match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i);
-
-      if (dateParts.length === 3 && timeMatch) {
-        const day = dateParts[0];
-        const month = dateParts[1];
-        const year = dateParts[2];
-
-        let hours = parseInt(timeMatch[1], 10);
-        const minutes = parseInt(timeMatch[2], 10);
-        const meridian = (timeMatch[3] || '').toUpperCase();
-
-        if (meridian === 'PM' && hours < 12) hours += 12;
-        if (meridian === 'AM' && hours === 12) hours = 0;
-
-        const localDate = new Date(year, month - 1, day, hours, minutes, 0);
-        if (!isNaN(localDate.getTime())) {
-          const dateFormatter = new Intl.DateTimeFormat('en-GB', {
-            timeZone: 'Africa/Nairobi',
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-          });
-          const timeFormatter = new Intl.DateTimeFormat('en-US', {
-            timeZone: 'Africa/Nairobi',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true,
-          });
-
-          return {
-            date: dateFormatter.format(localDate),
-            time: timeFormatter.format(localDate),
-          };
-        }
-      }
+      return {
+        date: fallbackDate,
+        time: fallbackTime,
+      };
     }
 
     return {
