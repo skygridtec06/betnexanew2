@@ -168,23 +168,31 @@ export const formatDateTimeForDisplayEAT = (dateTime: string | undefined | null)
   }
 
   try {
-    const utcDate = new Date(dateTime);
-    if (isNaN(utcDate.getTime())) {
+    const parsedDate = new Date(dateTime);
+    if (isNaN(parsedDate.getTime())) {
       return { date: 'N/A', time: 'N/A' };
     }
 
-    const eatDate = new Date(utcDate.getTime() + 3 * 60 * 60 * 1000);
-    const date = `${String(eatDate.getUTCDate()).padStart(2, '0')}/${String(eatDate.getUTCMonth() + 1).padStart(2, '0')}/${eatDate.getUTCFullYear()}`;
+    const dateFormatter = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Africa/Nairobi',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
 
-    let hours = eatDate.getUTCHours();
-    const minutes = String(eatDate.getUTCMinutes()).padStart(2, '0');
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12;
+    const timeFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Africa/Nairobi',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+
+    const date = dateFormatter.format(parsedDate);
+    const time = timeFormatter.format(parsedDate);
 
     return {
       date,
-      time: `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`,
+      time,
     };
   } catch (error) {
     console.warn('⚠️ Error formatting bet timestamp in EAT:', error);

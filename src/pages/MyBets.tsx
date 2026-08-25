@@ -57,12 +57,24 @@ function getPlacedDateTimeEAT(createdAt?: string, fallbackDate?: string, fallbac
         if (meridian === 'PM' && hours < 12) hours += 12;
         if (meridian === 'AM' && hours === 12) hours = 0;
 
-        const base = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
-        if (!isNaN(base.getTime())) {
-          const eat = addThreeHoursToDate(base);
+        const localDate = new Date(year, month - 1, day, hours, minutes, 0);
+        if (!isNaN(localDate.getTime())) {
+          const dateFormatter = new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Africa/Nairobi',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+          });
+          const timeFormatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Africa/Nairobi',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+          });
+
           return {
-            date: `${String(eat.getUTCDate()).padStart(2, '0')}/${String(eat.getUTCMonth() + 1).padStart(2, '0')}/${eat.getUTCFullYear()}`,
-            time: format12h(eat.getUTCHours(), eat.getUTCMinutes()),
+            date: dateFormatter.format(localDate),
+            time: timeFormatter.format(localDate),
           };
         }
       }
