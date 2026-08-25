@@ -42,10 +42,14 @@ function getPlacedDateTimeEAT(createdAt?: string, fallbackDate?: string, fallbac
     }
 
     if (fallbackDate && fallbackTime) {
-      return {
-        date: fallbackDate,
-        time: fallbackTime,
-      };
+      const fallbackDateValue = String(fallbackDate).trim();
+      const fallbackTimeValue = String(fallbackTime).trim();
+      if (fallbackDateValue && fallbackTimeValue) {
+        return {
+          date: fallbackDateValue,
+          time: fallbackTimeValue,
+        };
+      }
     }
 
     return {
@@ -109,34 +113,38 @@ export default function MyBets() {
         const apiUrl = import.meta.env.VITE_API_URL || 'https://www.betnexabackend.co.ke';
         const response = await fetch(`${apiUrl}/api/bets/user?phoneNumber=${encodeURIComponent(user.phone)}`, {
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
+          cache: 'no-store'
         });
 
         const data = await response.json();
 
         if (data.success && data.bets) {
           // Transform backend bets to frontend format
-          const transformedBets = data.bets.map((bet: any) => ({
-            ...(() => {
-              const placed = getPlacedDateTimeEAT(bet.created_at, bet.bet_date, bet.bet_time);
-              return { date: placed.date, time: placed.time };
-            })(),
-            id: bet.id,
-            betId: bet.bet_id,
-            createdAt: bet.created_at, // Store the ISO timestamp for proper timezone conversion
-            stake: parseFloat(bet.stake),
-            potentialWin: parseFloat(bet.potential_win),
-            amountWon: bet.amount_won ? parseFloat(bet.amount_won) : undefined,
-            totalOdds: parseFloat(bet.total_odds),
-            status: bet.status,
-            selections: (bet.selections || []).map((sel: any) => ({
-              matchId: sel.gameRefId || sel.game_id || sel.matchId,
-              match: `${sel.home_team} vs ${sel.away_team}`,
-              type: sel.market_key,
-              market: sel.market_type,
-              odds: parseFloat(sel.odds)
-            }))
-          }));
+          const transformedBets = data.bets.map((bet: any) => {
+            const placed = getPlacedDateTimeEAT(bet.created_at, bet.bet_date, bet.bet_time);
+            return {
+              ...(() => {
+                const base = { date: placed.date, time: placed.time };
+                return base;
+              })(),
+              id: bet.id,
+              betId: bet.bet_id,
+              createdAt: bet.created_at,
+              stake: parseFloat(bet.stake),
+              potentialWin: parseFloat(bet.potential_win),
+              amountWon: bet.amount_won ? parseFloat(bet.amount_won) : undefined,
+              totalOdds: parseFloat(bet.total_odds),
+              status: bet.status,
+              selections: (bet.selections || []).map((sel: any) => ({
+                matchId: sel.gameRefId || sel.game_id || sel.matchId,
+                match: `${sel.home_team} vs ${sel.away_team}`,
+                type: sel.market_key,
+                market: sel.market_type,
+                odds: parseFloat(sel.odds)
+              }))
+            };
+          });
 
           setBets(transformedBets);
           console.log(`✅ Loaded ${transformedBets.length} bets from server`);
