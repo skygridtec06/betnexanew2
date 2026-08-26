@@ -170,6 +170,7 @@ const AdminPortal = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          phone: loggedInUser?.phone || manualTransactionForm.phoneNumber || manualTransactionUser.phone,
           userId: manualTransactionUser.id,
           type: manualTransactionForm.type,
           amount,

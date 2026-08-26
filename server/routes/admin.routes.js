@@ -35,7 +35,7 @@ async function checkAdmin(req, res, next) {
   }
   // ...existing code for other routes...
   try {
-    const phone = req.body.phone || req.query.phone;
+    const phone = req.body.phone || req.body.phoneNumber || req.query.phone || req.query.phoneNumber;
     console.log('\n🔐 [checkAdmin] Verifying admin access');
     console.log('   Phone from request:', phone);
     if (!phone) {
