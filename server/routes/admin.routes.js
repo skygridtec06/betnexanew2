@@ -4201,6 +4201,7 @@ router.post('/transactions/manual', checkAdmin, async (req, res) => {
     const externalReference = `MANUAL-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
     const transactionPayload = {
+      transaction_id: externalReference,
       user_id: userId,
       type: normalizedType,
       amount: numericAmount,
