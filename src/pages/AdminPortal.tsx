@@ -139,6 +139,81 @@ const AdminPortal = () => {
     setShowBetDetailsDialog(false);
   };
 
+  const openManualTransactionDialog = (user: any) => {
+    setManualTransactionUser(user);
+    setManualTransactionForm({
+      type: 'deposit',
+      amount: '',
+      status: 'completed',
+      date: new Date().toISOString().slice(0, 10),
+      time: new Date().toTimeString().slice(0, 5),
+      phoneNumber: user?.phone || '',
+      description: '',
+      method: 'manual-adjustment',
+      notes: '',
+    });
+    setShowManualTransactionDialog(true);
+  };
+
+  const handleManualTransactionSubmit = async () => {
+    if (!manualTransactionUser) return;
+
+    const amount = Number(manualTransactionForm.amount);
+    if (!manualTransactionUser?.id || !Number.isFinite(amount) || amount <= 0) {
+      alert('Please enter a valid amount greater than zero.');
+      return;
+    }
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://www.betnexabackend.co.ke';
+      const response = await fetch(`${apiUrl}/api/admin/transactions/manual`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: manualTransactionUser.id,
+          type: manualTransactionForm.type,
+          amount,
+          status: manualTransactionForm.status,
+          date: manualTransactionForm.date,
+          time: manualTransactionForm.time,
+          phoneNumber: manualTransactionForm.phoneNumber || manualTransactionUser.phone,
+          description: manualTransactionForm.description || `${manualTransactionForm.type.charAt(0).toUpperCase() + manualTransactionForm.type.slice(1)} inserted by admin`,
+          method: manualTransactionForm.method,
+          notes: manualTransactionForm.notes,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to insert transaction');
+      }
+
+      if (data.user?.account_balance !== undefined) {
+        updateUser(manualTransactionUser.id, { accountBalance: Number(data.user.account_balance) || 0 });
+      }
+
+      setShowManualTransactionDialog(false);
+      setManualTransactionUser(null);
+      setManualTransactionForm({
+        type: 'deposit',
+        amount: '',
+        status: 'completed',
+        date: new Date().toISOString().slice(0, 10),
+        time: new Date().toTimeString().slice(0, 5),
+        phoneNumber: '',
+        description: '',
+        method: 'manual-adjustment',
+        notes: '',
+      });
+
+      alert(`✅ Manual ${manualTransactionForm.type} transaction inserted for ${manualTransactionUser.name}.`);
+    } catch (error) {
+      console.error('Failed to insert manual transaction:', error);
+      alert(error instanceof Error ? error.message : 'Failed to insert transaction');
+    }
+  };
+
   const getSelectionMarketName = (market: string) => {
     if (!market) return "Unknown Market";
     if (marketLabels[market]) return marketLabels[market];
@@ -176,6 +251,19 @@ const AdminPortal = () => {
   const [editingUserData, setEditingUserData] = useState<Record<string, any>>({});
   const [showUserTransactionsDialog, setShowUserTransactionsDialog] = useState(false);
   const [selectedTransactionUser, setSelectedTransactionUser] = useState<any>(null);
+  const [showManualTransactionDialog, setShowManualTransactionDialog] = useState(false);
+  const [manualTransactionUser, setManualTransactionUser] = useState<any>(null);
+  const [manualTransactionForm, setManualTransactionForm] = useState({
+    type: 'deposit',
+    amount: '',
+    status: 'completed',
+    date: new Date().toISOString().slice(0, 10),
+    time: new Date().toTimeString().slice(0, 5),
+    phoneNumber: '',
+    description: '',
+    method: 'manual-adjustment',
+    notes: '',
+  });
   const [transactionActionInProgress, setTransactionActionInProgress] = useState<string | null>(null);
   const [userTransactionsLoading, setUserTransactionsLoading] = useState(false);
   const [newGame, setNewGame] = useState<{
@@ -3818,6 +3906,13 @@ const AdminPortal = () => {
                             >
                               <DollarSign className="mr-1 h-3 w-3" /> View Transactions
                             </Button>
+                            <Button
+                              size="sm"
+                              className="bg-green-600 text-white hover:bg-green-700"
+                              onClick={() => openManualTransactionDialog(user)}
+                            >
+                              <Plus className="mr-1 h-3 w-3" /> Insert Transaction
+                            </Button>
                             {!user.withdrawalActivated ? (
                               <Button
                                 size="sm"
@@ -3904,6 +3999,122 @@ const AdminPortal = () => {
               ))}
             </div>
           </TabsContent>
+
+          <Dialog open={showManualTransactionDialog} onOpenChange={setShowManualTransactionDialog}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Insert Manual Transaction</DialogTitle>
+                <DialogDescription>
+                  Add a deposit or withdrawal for {manualTransactionUser?.name || 'this user'}.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">Type</label>
+                    <select
+                      value={manualTransactionForm.type}
+                      onChange={(e) => setManualTransactionForm({ ...manualTransactionForm, type: e.target.value })}
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none ring-0"
+                    >
+                      <option value="deposit">Deposit</option>
+                      <option value="withdrawal">Withdrawal</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">Status</label>
+                    <select
+                      value={manualTransactionForm.status}
+                      onChange={(e) => setManualTransactionForm({ ...manualTransactionForm, status: e.target.value })}
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none ring-0"
+                    >
+                      <option value="completed">Completed</option>
+                      <option value="failed">Failed</option>
+                      <option value="pending">Pending</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">Amount (KSH)</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      step="0.01"
+                      value={manualTransactionForm.amount}
+                      onChange={(e) => setManualTransactionForm({ ...manualTransactionForm, amount: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">Method</label>
+                    <Input
+                      value={manualTransactionForm.method}
+                      onChange={(e) => setManualTransactionForm({ ...manualTransactionForm, method: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">Date</label>
+                    <Input
+                      type="date"
+                      value={manualTransactionForm.date}
+                      onChange={(e) => setManualTransactionForm({ ...manualTransactionForm, date: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">Time</label>
+                    <Input
+                      type="time"
+                      value={manualTransactionForm.time}
+                      onChange={(e) => setManualTransactionForm({ ...manualTransactionForm, time: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Phone Number</label>
+                  <Input
+                    value={manualTransactionForm.phoneNumber}
+                    onChange={(e) => setManualTransactionForm({ ...manualTransactionForm, phoneNumber: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Description</label>
+                  <Input
+                    value={manualTransactionForm.description}
+                    onChange={(e) => setManualTransactionForm({ ...manualTransactionForm, description: e.target.value })}
+                    placeholder="Manual deposit adjustment"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Notes</label>
+                  <Input
+                    value={manualTransactionForm.notes}
+                    onChange={(e) => setManualTransactionForm({ ...manualTransactionForm, notes: e.target.value })}
+                    placeholder="Optional admin note"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setShowManualTransactionDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button className="bg-green-600 text-white hover:bg-green-700" onClick={handleManualTransactionSubmit}>
+                    Save Transaction
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           <TabsContent value="broadcast" className="space-y-6">
             <div className="mb-4">

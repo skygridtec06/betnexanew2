@@ -4147,6 +4147,117 @@ router.get('/payments', checkAdmin, async (req, res) => {
 
 
 // POST: Record withdrawal transaction (when user initiates withdrawal)
+// POST: Manually insert a transaction for any user (admin tool)
+router.post('/transactions/manual', checkAdmin, async (req, res) => {
+  try {
+    const {
+      userId,
+      type,
+      amount,
+      status,
+      date,
+      time,
+      phoneNumber,
+      description,
+      method,
+      notes,
+    } = req.body;
+
+    console.log('\n💰 [POST /api/admin/transactions/manual] Inserting manual transaction');
+
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'User ID is required' });
+    }
+
+    const normalizedType = String(type || '').trim().toLowerCase();
+    if (!['deposit', 'withdrawal'].includes(normalizedType)) {
+      return res.status(400).json({ success: false, error: 'Type must be deposit or withdrawal' });
+    }
+
+    const numericAmount = Number(amount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return res.status(400).json({ success: false, error: 'Amount must be greater than zero' });
+    }
+
+    const normalizedStatus = String(status || 'pending').trim().toLowerCase();
+    const validStatuses = ['completed', 'failed', 'pending'];
+    if (!validStatuses.includes(normalizedStatus)) {
+      return res.status(400).json({ success: false, error: 'Status must be completed, failed, or pending' });
+    }
+
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, account_balance, username, phone_number')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const localDate = date || new Date().toISOString().split('T')[0];
+    const localTime = time || '00:00';
+    const createdAt = new Date(`${localDate}T${localTime}:00`).toISOString();
+    const externalReference = `MANUAL-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    const transactionPayload = {
+      user_id: userId,
+      type: normalizedType,
+      amount: numericAmount,
+      status: normalizedStatus,
+      phone_number: phoneNumber || user.phone_number || null,
+      description: description || `${normalizedType.charAt(0).toUpperCase() + normalizedType.slice(1)} manually inserted by admin`,
+      method: method || 'manual-adjustment',
+      external_reference: externalReference,
+      mpesa_receipt: normalizedStatus === 'completed' ? `MANUAL-${Date.now()}` : null,
+      admin_notes: notes || 'Inserted manually from admin panel',
+      created_at: createdAt,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: insertedTransaction, error: insertError } = await supabase
+      .from('transactions')
+      .insert([transactionPayload])
+      .select('*')
+      .single();
+
+    if (insertError) {
+      console.error('❌ Error inserting manual transaction:', insertError.message);
+      return res.status(500).json({ success: false, error: insertError.message || 'Failed to insert transaction' });
+    }
+
+    let updatedUser = { ...user };
+    if (normalizedStatus === 'completed') {
+      const currentBalance = Number(user.account_balance) || 0;
+      const delta = normalizedType === 'deposit' ? numericAmount : -numericAmount;
+      const nextBalance = Math.max(0, currentBalance + delta);
+
+      const { data: refreshedUser, error: balanceError } = await supabase
+        .from('users')
+        .update({ account_balance: nextBalance, updated_at: new Date().toISOString() })
+        .eq('id', userId)
+        .select('id, account_balance, username, phone_number')
+        .single();
+
+      if (balanceError) {
+        console.warn('⚠️ Failed to sync manual transaction balance:', balanceError.message);
+      } else {
+        updatedUser = refreshedUser || updatedUser;
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Manual ${normalizedType} transaction inserted successfully`,
+      transaction: insertedTransaction,
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error('❌ Manual transaction insertion error:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to insert manual transaction' });
+  }
+});
+
 router.post('/transactions/withdrawal', async (req, res) => {
   try {
     const { userId, amount, phoneNumber, reason, idempotencyKey } = req.body;
