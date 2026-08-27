@@ -4483,6 +4483,28 @@ const AdminPortal = () => {
               <h3 className="font-display text-sm font-bold uppercase tracking-wider text-foreground">Manage Bets</h3>
               <p className="mt-1 text-xs text-muted-foreground">All open, won, and lost bets - Mark selections individually for multibets</p>
             </div>
+
+            {markedBets.size > 0 && (
+              <div className="mb-4 flex justify-end gap-3 rounded-xl border border-violet-500/40 bg-violet-500/10 p-3 shadow-lg shadow-violet-500/10">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={moveMarkedBets}
+                  className="text-xs bg-violet-600 text-white hover:bg-violet-700 shadow-md"
+                >
+                  <ArrowRightLeft className="mr-1 h-3 w-3" /> Move {markedBets.size} Marked
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={deleteMarkedBets}
+                  disabled={deletingMarkedBets}
+                  className="text-xs shadow-md"
+                >
+                  <Trash2 className="mr-1 h-3 w-3" /> Delete {markedBets.size} Marked
+                </Button>
+              </div>
+            )}
             
             {bets.length === 0 ? (
               <div className="rounded-xl border border-border/50 bg-card p-8 text-center text-muted-foreground">
