@@ -3,7 +3,7 @@ import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Trash2, CheckCircle, XCircle, Clock, DollarSign, Users, UserPlus, BarChart3, Trophy, Settings, RefreshCw, Edit2, Save, ArrowDown, ArrowUp, Play, Pause, Square, Lock, Unlock, Shield, Zap, Upload, Image as ImageIcon, Loader2, Megaphone, Calendar, Download, Ban, Flame } from "lucide-react";
+import { Plus, Trash2, CheckCircle, XCircle, Clock, DollarSign, Users, UserPlus, BarChart3, Trophy, Settings, RefreshCw, Edit2, Save, ArrowDown, ArrowUp, Play, Pause, Square, Lock, Unlock, Shield, Zap, Upload, Image as ImageIcon, Loader2, Megaphone, Calendar, Download, Ban, Flame, ArrowRightLeft } from "lucide-react";
 import { type MatchMarkets } from "@/components/MatchCard";
 import { useMatches } from "@/context/MatchContext";
 import { useBets, type PlacedBet } from "@/context/BetContext";
@@ -431,8 +431,9 @@ const AdminPortal = () => {
     includeAdmins: false,
   });
 
-  // Bet marking and deletion state
+  // Bet marking, moving, and deletion state
   const [markedBets, setMarkedBets] = useState<Set<string>>(new Set());
+  const [movedBetIds, setMovedBetIds] = useState<Set<string>>(new Set());
   const [deletingMarkedBets, setDeletingMarkedBets] = useState(false);
 
   // Game marking and deletion state
@@ -623,6 +624,31 @@ const AdminPortal = () => {
       }
       return newSet;
     });
+  };
+
+  const moveMarkedBets = () => {
+    if (markedBets.size === 0) {
+      alert('No bets selected to move.');
+      return;
+    }
+
+    const selectedIds = Array.from(markedBets);
+    setMovedBetIds(prev => {
+      const next = new Set(prev);
+      selectedIds.forEach(id => next.add(id));
+      return next;
+    });
+    setMarkedBets(new Set());
+    alert(`✅ Moved ${selectedIds.length} bet(s) to the moved bets list.`);
+  };
+
+  const undoMovedBet = (betId: string) => {
+    setMovedBetIds(prev => {
+      const next = new Set(prev);
+      next.delete(betId);
+      return next;
+    });
+    alert('✅ Bet restored to active list.');
   };
 
   const deleteMarkedBets = async () => {
@@ -4466,16 +4492,18 @@ const AdminPortal = () => {
               <div className="space-y-8">
                 {/* Separate and sort bets */}
                 {(() => {
-                  // Separate and sort bets
-                  const openBets = bets.filter(b => b.status === "Open").sort((a, b) => {
+                  // Separate and sort bets while excluding admin-moved bets from active counts.
+                  const activeBets = bets.filter(b => !movedBetIds.has(b.id));
+                  const openBets = activeBets.filter(b => b.status === "Open").sort((a, b) => {
                     const dateA = new Date(a.date).getTime();
                     const dateB = new Date(b.date).getTime();
                     return dateB - dateA; // Latest first
                   });
                   
-                  const settledBets = bets.filter(b => b.status !== "Open");
+                  const settledBets = activeBets.filter(b => b.status !== "Open");
                   const wonBets = settledBets.filter(b => b.status === "Won");
                   const lostBets = settledBets.filter(b => b.status === "Lost");
+                  const movedBets = bets.filter(b => movedBetIds.has(b.id));
                   
                   // Render Open Bets Section
                   return (
@@ -4488,15 +4516,25 @@ const AdminPortal = () => {
                               <Clock className="h-4 w-4" /> Open Bets ({openBets.length})
                             </h4>
                             {markedBets.size > 0 && (
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={deleteMarkedBets}
-                                disabled={deletingMarkedBets}
-                                className="text-xs"
-                              >
-                                <Trash2 className="mr-1 h-3 w-3" /> Delete {markedBets.size} Marked
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={moveMarkedBets}
+                                  className="text-xs bg-violet-600 text-white hover:bg-violet-700"
+                                >
+                                  <ArrowRightLeft className="mr-1 h-3 w-3" /> Move {markedBets.size} Marked
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={deleteMarkedBets}
+                                  disabled={deletingMarkedBets}
+                                  className="text-xs"
+                                >
+                                  <Trash2 className="mr-1 h-3 w-3" /> Delete {markedBets.size} Marked
+                                </Button>
+                              </div>
                             )}
                           </div>
                           
@@ -4598,15 +4636,25 @@ const AdminPortal = () => {
                               <CheckCircle className="h-4 w-4" /> Won Bets ({wonBets.length})
                             </h4>
                             {markedBets.size > 0 && (
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={deleteMarkedBets}
-                                disabled={deletingMarkedBets}
-                                className="text-xs"
-                              >
-                                <Trash2 className="mr-1 h-3 w-3" /> Delete {markedBets.size} Marked
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={moveMarkedBets}
+                                  className="text-xs bg-violet-600 text-white hover:bg-violet-700"
+                                >
+                                  <ArrowRightLeft className="mr-1 h-3 w-3" /> Move {markedBets.size} Marked
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={deleteMarkedBets}
+                                  disabled={deletingMarkedBets}
+                                  className="text-xs"
+                                >
+                                  <Trash2 className="mr-1 h-3 w-3" /> Delete {markedBets.size} Marked
+                                </Button>
+                              </div>
                             )}
                           </div>
                           
@@ -4700,6 +4748,69 @@ const AdminPortal = () => {
                         </div>
                       )}
                       
+                      {/* MOVED BETS - Below Won Bets / Admin-only archive */}
+                      {movedBets.length > 0 && (
+                        <div className="space-y-3 pt-8 pb-8 border-b-2 border-violet-500/30">
+                          <div className="bg-card/95 backdrop-blur-sm py-2 flex items-center justify-between">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-violet-500 flex items-center gap-2">
+                              <ArrowRightLeft className="h-4 w-4" /> Moved Bets ({movedBets.length})
+                            </h4>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                              <thead className="bg-violet-500/10 border-b border-violet-500/30">
+                                <tr className="text-violet-500">
+                                  <th className="text-left p-2 font-semibold">Username</th>
+                                  <th className="text-left p-2 font-semibold">Phone</th>
+                                  <th className="text-center p-2 font-semibold">Status</th>
+                                  <th className="text-right p-2 font-semibold">Stake (KSH)</th>
+                                  <th className="text-right p-2 font-semibold">Win Amount (KSH)</th>
+                                  <th className="text-left p-2 font-semibold">Bet ID</th>
+                                  <th className="text-left p-2 font-semibold">Date & Time Placed</th>
+                                  <th className="text-center p-2 font-semibold">Odds</th>
+                                  <th className="text-center p-2 font-semibold">Selections</th>
+                                  <th className="text-center p-2 font-semibold">View</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border">
+                                {movedBets.map((bet) => (
+                                  <tr key={bet.id} className="bg-violet-500/5 hover:bg-violet-500/10 transition-colors">
+                                    <td className="p-2 text-foreground font-medium">{bet.username || 'Unknown'}</td>
+                                    <td className="p-2 text-muted-foreground">{bet.phone_number || '-'}</td>
+                                    <td className="p-2 text-center">
+                                      <Badge className="bg-violet-500/15 text-violet-400 hover:bg-violet-500/15 text-[10px]">Moved</Badge>
+                                    </td>
+                                    <td className="p-2 text-right text-primary font-semibold">{bet.stake.toLocaleString()}</td>
+                                    <td className="p-2 text-right text-violet-500 font-bold">{bet.potentialWin.toLocaleString()}</td>
+                                    <td className="p-2 text-foreground font-mono">#{bet.betId}</td>
+                                    <td className="p-2 text-muted-foreground whitespace-nowrap">
+                                      {bet.date ? formatTransactionDateInEAT(bet.date) : 'Unknown'}
+                                    </td>
+                                    <td className="p-2 text-center">{bet.totalOdds.toFixed(2)}</td>
+                                    <td className="p-2 text-center">{bet.selections.length}</td>
+                                    <td className="p-2 text-center">
+                                      <div className="flex items-center justify-center gap-2">
+                                        <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => openBetDetails(bet)}>
+                                          View
+                                        </Button>
+                                        <Button
+                                          variant="secondary"
+                                          size="sm"
+                                          className="h-7 text-[10px] bg-violet-600 text-white hover:bg-violet-700"
+                                          onClick={() => undoMovedBet(bet.id)}
+                                        >
+                                          Undo
+                                        </Button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                      
                       {/* LOST BETS - Below Won with Divider */}
                       {lostBets.length > 0 && (
                         <div className="space-y-3 pt-8">
@@ -4708,15 +4819,25 @@ const AdminPortal = () => {
                               <XCircle className="h-4 w-4" /> Lost Bets ({lostBets.length})
                             </h4>
                             {markedBets.size > 0 && (
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={deleteMarkedBets}
-                                disabled={deletingMarkedBets}
-                                className="text-xs"
-                              >
-                                <Trash2 className="mr-1 h-3 w-3" /> Delete {markedBets.size} Marked
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={moveMarkedBets}
+                                  className="text-xs bg-violet-600 text-white hover:bg-violet-700"
+                                >
+                                  <ArrowRightLeft className="mr-1 h-3 w-3" /> Move {markedBets.size} Marked
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={deleteMarkedBets}
+                                  disabled={deletingMarkedBets}
+                                  className="text-xs"
+                                >
+                                  <Trash2 className="mr-1 h-3 w-3" /> Delete {markedBets.size} Marked
+                                </Button>
+                              </div>
                             )}
                           </div>
                           
