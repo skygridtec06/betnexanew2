@@ -4516,12 +4516,12 @@ const AdminPortal = () => {
                               <Clock className="h-4 w-4" /> Open Bets ({openBets.length})
                             </h4>
                             {markedBets.size > 0 && (
-                              <div className="flex gap-2">
+                              <div className="flex gap-2 justify-end">
                                 <Button
                                   variant="secondary"
                                   size="sm"
                                   onClick={moveMarkedBets}
-                                  className="text-xs bg-violet-600 text-white hover:bg-violet-700"
+                                  className="text-xs bg-violet-600 text-white hover:bg-violet-700 shadow-md"
                                 >
                                   <ArrowRightLeft className="mr-1 h-3 w-3" /> Move {markedBets.size} Marked
                                 </Button>
@@ -4530,7 +4530,7 @@ const AdminPortal = () => {
                                   size="sm"
                                   onClick={deleteMarkedBets}
                                   disabled={deletingMarkedBets}
-                                  className="text-xs"
+                                  className="text-xs shadow-md"
                                 >
                                   <Trash2 className="mr-1 h-3 w-3" /> Delete {markedBets.size} Marked
                                 </Button>
@@ -4636,12 +4636,12 @@ const AdminPortal = () => {
                               <CheckCircle className="h-4 w-4" /> Won Bets ({wonBets.length})
                             </h4>
                             {markedBets.size > 0 && (
-                              <div className="flex gap-2">
+                              <div className="flex gap-2 justify-end">
                                 <Button
                                   variant="secondary"
                                   size="sm"
                                   onClick={moveMarkedBets}
-                                  className="text-xs bg-violet-600 text-white hover:bg-violet-700"
+                                  className="text-xs bg-violet-600 text-white hover:bg-violet-700 shadow-md"
                                 >
                                   <ArrowRightLeft className="mr-1 h-3 w-3" /> Move {markedBets.size} Marked
                                 </Button>
@@ -4650,7 +4650,7 @@ const AdminPortal = () => {
                                   size="sm"
                                   onClick={deleteMarkedBets}
                                   disabled={deletingMarkedBets}
-                                  className="text-xs"
+                                  className="text-xs shadow-md"
                                 >
                                   <Trash2 className="mr-1 h-3 w-3" /> Delete {markedBets.size} Marked
                                 </Button>
@@ -4819,12 +4819,12 @@ const AdminPortal = () => {
                               <XCircle className="h-4 w-4" /> Lost Bets ({lostBets.length})
                             </h4>
                             {markedBets.size > 0 && (
-                              <div className="flex gap-2">
+                              <div className="flex gap-2 justify-end">
                                 <Button
                                   variant="secondary"
                                   size="sm"
                                   onClick={moveMarkedBets}
-                                  className="text-xs bg-violet-600 text-white hover:bg-violet-700"
+                                  className="text-xs bg-violet-600 text-white hover:bg-violet-700 shadow-md"
                                 >
                                   <ArrowRightLeft className="mr-1 h-3 w-3" /> Move {markedBets.size} Marked
                                 </Button>
@@ -4833,7 +4833,7 @@ const AdminPortal = () => {
                                   size="sm"
                                   onClick={deleteMarkedBets}
                                   disabled={deletingMarkedBets}
-                                  className="text-xs"
+                                  className="text-xs shadow-md"
                                 >
                                   <Trash2 className="mr-1 h-3 w-3" /> Delete {markedBets.size} Marked
                                 </Button>
