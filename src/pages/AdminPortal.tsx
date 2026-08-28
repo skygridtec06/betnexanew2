@@ -712,7 +712,22 @@ const AdminPortal = () => {
       return;
     }
 
-    if (!window.confirm(`⚠️ Are you sure you want to delete ${markedGames.size} marked API game(s)? This action cannot be undone.`)) {
+    const selectedGameList = Array.from(markedGames)
+      .map((gameId) => games.find((g) => g.id === gameId))
+      .filter(Boolean);
+    const includesManualAdminGames = selectedGameList.some((game) => {
+      const gameId = String(game?.game_id || game?.id || '');
+      return !gameId.startsWith('af-') && !gameId.startsWith('ab-');
+    });
+
+    if (includesManualAdminGames) {
+      const confirmed = window.confirm(
+        `⚠️ You have selected ${selectedGameList.filter((game) => !String(game?.game_id || game?.id || '').startsWith('af-') && !String(game?.game_id || game?.id || '').startsWith('ab-')).length} admin-added match(es). This will permanently remove them from the system. Continue?`
+      );
+      if (!confirmed) return;
+    }
+
+    if (!window.confirm(`⚠️ Are you sure you want to delete ${markedGames.size} marked game(s)? This action cannot be undone.`)) {
       return;
     }
 
@@ -3518,7 +3533,7 @@ const AdminPortal = () => {
               <h4 className="font-display text-sm font-bold uppercase tracking-wider text-orange-500 flex items-center gap-2">
                 <Trash2 className="h-4 w-4" /> Delete All Games by Date
               </h4>
-              <p className="text-xs text-muted-foreground">Select and delete ALL games (API and admin-added) matching a specific kickoff date.</p>
+              <p className="text-xs text-muted-foreground">Warning: this includes admin-added matches. Use only when you intentionally want to remove every game on that date.</p>
               
               <div className="flex gap-2">
                 <Input
