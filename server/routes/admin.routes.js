@@ -924,27 +924,17 @@ router.get('/games', async (req, res) => {
 
     const games = gamesResult.data || [];
 
-    // Auto-cleanup expired API games — fire-and-forget so it never blocks the response
-    const now = new Date();
-    const expiredIds = games
-      .filter(g => {
-        if (!g.game_id) return false;
-        if (!g.game_id.startsWith('af-') && !g.game_id.startsWith('ab-')) return false;
-        if (g.status === 'live' || g.status === 'finished') return false;
-        const kickoff = new Date(g.scheduled_time || g.time);
-        return !isNaN(kickoff.getTime()) && kickoff <= now;
-      })
-      .map(g => g.id);
-
-    if (expiredIds.length > 0) {
-      Promise.all([
-        supabase.from('markets').delete().in('game_id', expiredIds),
-        supabase.from('games').delete().in('id', expiredIds),
-      ]).catch(e => console.warn('⚠️ Auto-cleanup error:', e.message));
-    }
-
-    const expiredSet = new Set(expiredIds);
-    const remainingGames = games.filter(g => !expiredSet.has(g.id));
+    // Keep manual/admin-added fixtures visible and do not auto-delete them.
+    // API-fetched games are intentionally retained until an admin explicitly removes them.
+    // Auto-deleting expired af-/ab- rows causes the disappearing-match bug seen in the app.
+    const remainingGames = games.filter(g => {
+      if (!g.game_id) return true;
+      const isApiGame = /^af-|^ab-/i.test(String(g.game_id));
+      if (!isApiGame) return true;
+      if (g.status === 'live' || g.status === 'finished') return true;
+      const kickoff = new Date(g.scheduled_time || g.time);
+      return !isNaN(kickoff.getTime()) ? kickoff > new Date() : true;
+    });
 
     // Group markets by game_id
     const allMarkets = marketsResult.data || [];

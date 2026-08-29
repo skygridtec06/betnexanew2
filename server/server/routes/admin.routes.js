@@ -952,27 +952,16 @@ router.get('/games', async (req, res) => {
     console.log(`✅ Query successful, got ${(games || []).length} games`);
 
     // Auto-cleanup: delete API-fetched (af-, ab-) games whose kickoff has passed
-    const now = new Date();
-    const afGamesToDelete = (games || []).filter(g => {
-      if (!g.game_id) return false;
-      const isApiGame = g.game_id.startsWith('af-') || g.game_id.startsWith('ab-');
-      if (!isApiGame) return false;
-      if (g.status === 'live' || g.status === 'finished') return false;
+    // Keep manual/admin-added fixtures visible and do not auto-delete them.
+    // Auto-deleting expired af-/ab- rows is what causes matches to disappear unexpectedly.
+    const remainingGames = (games || []).filter(g => {
+      if (!g.game_id) return true;
+      const isApiGame = /^af-|^ab-/i.test(String(g.game_id));
+      if (!isApiGame) return true;
+      if (g.status === 'live' || g.status === 'finished') return true;
       const kickoff = new Date(g.time);
-      return !isNaN(kickoff.getTime()) && kickoff <= now;
+      return !isNaN(kickoff.getTime()) ? kickoff > new Date() : true;
     });
-
-    if (afGamesToDelete.length > 0) {
-      const idsToDelete = afGamesToDelete.map(g => g.id);
-      console.log(`🗑️ Auto-deleting ${idsToDelete.length} expired af- games`);
-      // Delete markets first, then games
-      await supabase.from('markets').delete().in('game_id', idsToDelete);
-      await supabase.from('games').delete().in('id', idsToDelete);
-    }
-
-    // Return remaining games (exclude the ones just deleted)
-    const deletedIds = new Set(afGamesToDelete.map(g => g.id));
-    const remainingGames = (games || []).filter(g => !deletedIds.has(g.id));
 
     console.log(`✅ Retrieved ${remainingGames.length} games successfully`);
 

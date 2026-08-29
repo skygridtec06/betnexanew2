@@ -54,8 +54,10 @@ const sortEndedGames = (games: any[]) => {
 };
 
 const isFutureKickoff = (time: string) => {
+  if (!time) return true;
   const kickoffMs = new Date(time).getTime();
-  return !Number.isNaN(kickoffMs) && kickoffMs > Date.now();
+  if (Number.isNaN(kickoffMs)) return true;
+  return kickoffMs > Date.now();
 };
 
 const Index = ({ sport = 'football' }: IndexProps) => {
