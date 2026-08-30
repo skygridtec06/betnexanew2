@@ -3,7 +3,7 @@ import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Trash2, CheckCircle, XCircle, Clock, DollarSign, Users, UserPlus, BarChart3, Trophy, Settings, RefreshCw, Edit2, Save, ArrowDown, ArrowUp, Play, Pause, Square, Lock, Unlock, Shield, Zap, Upload, Image as ImageIcon, Loader2, Megaphone, Download, Ban, Flame, ArrowRightLeft } from "lucide-react";
+import { Plus, Trash2, CheckCircle, XCircle, Clock, DollarSign, Users, UserPlus, BarChart3, Trophy, Settings, RefreshCw, Edit2, Save, ArrowDown, ArrowUp, Play, Pause, Square, Lock, Unlock, Shield, Zap, Upload, Image as ImageIcon, Loader2, Megaphone, Download, Ban, Flame, ArrowRightLeft, Wallet, FileText, Sparkles } from "lucide-react";
 import { type MatchMarkets } from "@/components/MatchCard";
 import { useMatches } from "@/context/MatchContext";
 import { useBets, type PlacedBet } from "@/context/BetContext";
@@ -20,6 +20,7 @@ import { formatDateInEAT, formatTransactionDateInEAT, formatTimeInEAT } from "@/
 import { ActiveMembers } from "@/components/ActiveMembers";
 import { FetchGamesFetchModal } from "@/components/FetchGamesFetchModal";
 import { EarningsCalculator } from "@/components/EarningsCalculator";
+import { jsPDF } from "jspdf";
 
 const marketLabels: Record<string, string> = {
   bttsYes: "BTTS Yes", bttsNo: "BTTS No",
@@ -427,8 +428,28 @@ const AdminPortal = () => {
 
   // Bet marking, moving, and deletion state
   const [markedBets, setMarkedBets] = useState<Set<string>>(new Set());
-  const [movedBetIds, setMovedBetIds] = useState<Set<string>>(new Set());
+  const MOVED_BETS_STORAGE_KEY = 'betnexa_admin_moved_bets';
+  const [movedBetIds, setMovedBetIds] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set();
+
+    try {
+      const saved = window.localStorage.getItem(MOVED_BETS_STORAGE_KEY);
+      if (!saved) return new Set();
+
+      const parsed = JSON.parse(saved);
+      return new Set(Array.isArray(parsed) ? parsed : []);
+    } catch (error) {
+      console.warn('Failed to load moved bets from local storage:', error);
+      return new Set();
+    }
+  });
   const [deletingMarkedBets, setDeletingMarkedBets] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(MOVED_BETS_STORAGE_KEY, JSON.stringify(Array.from(movedBetIds)));
+    }
+  }, [movedBetIds]);
 
   // Game marking and deletion state
   const [markedGames, setMarkedGames] = useState<Set<string>>(new Set());
@@ -2302,6 +2323,168 @@ const AdminPortal = () => {
   })();
 
   const [selectedSignupDate, setSelectedSignupDate] = useState<string | null>(null);
+  const [showFinanceReportDialog, setShowFinanceReportDialog] = useState(false);
+  const [financeReportStart, setFinanceReportStart] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 6);
+    return date.toISOString().slice(0, 10);
+  });
+  const [financeReportEnd, setFinanceReportEnd] = useState(() => new Date().toISOString().slice(0, 10));
+
+  const normalizeFinanceDate = (value: string | null | undefined) => {
+    if (!value) return null;
+    const date = new Date(`${value}T00:00:00`);
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+
+  const getFinanceMetrics = () => {
+    const startDate = normalizeFinanceDate(financeReportStart);
+    const endDate = normalizeFinanceDate(financeReportEnd);
+
+    const filtered = allTransactions.filter((transaction: any) => {
+      const candidate = new Date(transaction.created_at || transaction.date || transaction.createdAt || transaction.updated_at || Date.now());
+      if (Number.isNaN(candidate.getTime())) return false;
+      if (startDate && candidate < startDate) return false;
+      if (endDate) {
+        const endOfDay = new Date(`${financeReportEnd}T23:59:59`);
+        if (candidate > endOfDay) return false;
+      }
+      return true;
+    });
+
+    const earnings = filtered
+      .filter((transaction: any) => {
+        const type = String(transaction.type || '').toLowerCase();
+        const status = String(transaction.status || '').toLowerCase();
+        const isCompleted = status === 'completed' || status === 'success';
+        return isCompleted && (type === 'deposit' || type === 'activation' || type === 'priority' || type === 'activation_fee');
+      })
+      .reduce((sum: number, transaction: any) => sum + Number(transaction.amount || 0), 0);
+
+    const spendings = filtered
+      .filter((transaction: any) => {
+        const type = String(transaction.type || '').toLowerCase();
+        const status = String(transaction.status || '').toLowerCase();
+        const isCompleted = status === 'completed' || status === 'success';
+        return isCompleted && (type === 'withdrawal' || type === 'withdraw' || type === 'payout');
+      })
+      .reduce((sum: number, transaction: any) => sum + Number(transaction.amount || 0), 0);
+
+    const datesInRange: string[] = [];
+    const cursor = new Date(`${financeReportStart}T00:00:00`);
+    const endCursor = new Date(`${financeReportEnd}T00:00:00`);
+    while (cursor <= endCursor) {
+      datesInRange.push(cursor.toISOString().slice(0, 10));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    const dailyBreakdown = datesInRange.map((date) => {
+      const entries = filtered.filter((transaction: any) => {
+        const txDate = new Date(transaction.created_at || transaction.date || transaction.createdAt || transaction.updated_at || Date.now());
+        return txDate.toISOString().slice(0, 10) === date;
+      });
+
+      const dailyEarnings = entries
+        .filter((transaction: any) => {
+          const type = String(transaction.type || '').toLowerCase();
+          const status = String(transaction.status || '').toLowerCase();
+          return (status === 'completed' || status === 'success') && (type === 'deposit' || type === 'activation' || type === 'priority' || type === 'activation_fee');
+        })
+        .reduce((sum: number, transaction: any) => sum + Number(transaction.amount || 0), 0);
+
+      const dailySpendings = entries
+        .filter((transaction: any) => {
+          const type = String(transaction.type || '').toLowerCase();
+          const status = String(transaction.status || '').toLowerCase();
+          return (status === 'completed' || status === 'success') && (type === 'withdrawal' || type === 'withdraw' || type === 'payout');
+        })
+        .reduce((sum: number, transaction: any) => sum + Number(transaction.amount || 0), 0);
+
+      return {
+        date,
+        earnings: dailyEarnings,
+        spendings: dailySpendings,
+        net: dailyEarnings - dailySpendings,
+      };
+    });
+
+    const periodDays = Math.max(1, datesInRange.length);
+    return {
+      earnings,
+      spendings,
+      net: earnings - spendings,
+      averageDailyEarnings: earnings / periodDays,
+      averageDailySpendings: spendings / periodDays,
+      dailyBreakdown,
+    };
+  };
+
+  const generateFinanceReportPdf = () => {
+    const metrics = getFinanceMetrics();
+    const doc = new jsPDF();
+
+    const periodLabel = `${new Date(`${financeReportStart}T00:00:00`).toLocaleDateString()} - ${new Date(`${financeReportEnd}T00:00:00`).toLocaleDateString()}`;
+    const netSummary = metrics.net >= 0 ? 'Healthy positive cash flow' : 'Spending exceeds earnings';
+    const recommendations = metrics.net >= 0
+      ? [
+          'Do: continue scaling deposit campaigns and keep the current payout controls in place.',
+          'Do: push high-conversion offers during peak volume days to convert more deposits.',
+          'Avoid: large manual bonus payouts without validating the real cash-flow margin.',
+        ]
+      : [
+          'Do: review oversized withdrawals and tighten payout approvals for the next cycle.',
+          'Do: focus on deposit growth campaigns to rebuild positive flow before more payouts are approved.',
+          'Avoid: approving withdrawals that exceed the current net position without a cash reserve check.',
+        ];
+
+    doc.setFillColor(29, 38, 56);
+    doc.rect(0, 0, 210, 26, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.text('Betnexa Finance Report', 14, 16);
+
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(11);
+    doc.text(`Period: ${periodLabel}`, 14, 38);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 45);
+    doc.text(`Status: ${netSummary}`, 14, 52);
+
+    doc.setFontSize(12);
+    doc.text('Executive Summary', 14, 68);
+    doc.setFontSize(10);
+    const summaryLines = [
+      `Total earnings: KSH ${metrics.earnings.toLocaleString()}`,
+      `Total spendings: KSH ${metrics.spendings.toLocaleString()}`,
+      `Net result: KSH ${metrics.net.toLocaleString()}`,
+      `Average daily earnings: KSH ${metrics.averageDailyEarnings.toLocaleString()}`,
+      `Average daily spendings: KSH ${metrics.averageDailySpendings.toLocaleString()}`,
+    ];
+
+    summaryLines.forEach((line, index) => {
+      doc.text(line, 14, 80 + index * 8);
+    });
+
+    const dailyStartY = 130;
+    doc.setFontSize(12);
+    doc.text('Daily Breakdown', 14, dailyStartY);
+    doc.setFontSize(9);
+    metrics.dailyBreakdown.slice(0, 7).forEach((day, index) => {
+      const y = dailyStartY + 10 + index * 10;
+      doc.text(`${day.date}: Earned KSH ${day.earnings.toLocaleString()} | Spent KSH ${day.spendings.toLocaleString()} | Net KSH ${day.net.toLocaleString()}`, 14, y);
+    });
+
+    const recStartY = dailyStartY + 70;
+    doc.setFontSize(12);
+    doc.text('AI Recommendations', 14, recStartY);
+    doc.setFontSize(9);
+    recommendations.forEach((item, index) => {
+      const wrapped = doc.splitTextToSize(`${index + 1}. ${item}`, 175);
+      doc.text(wrapped, 14, recStartY + 12 + index * 20);
+    });
+
+    doc.save(`betnexa-finance-report-${financeReportStart}-to-${financeReportEnd}.pdf`);
+    setShowFinanceReportDialog(false);
+  };
 
   const stopDarajaTestPolling = () => {
     if (darajaTestIntervalRef.current) {
@@ -2544,7 +2727,76 @@ const AdminPortal = () => {
               </div>
             </div>
           ))}
+
+          <button
+            type="button"
+            onClick={() => {
+              window.open('/admin-finance', '_blank', 'noopener,noreferrer');
+            }}
+            className="gradient-card rounded-xl border border-border/50 p-5 text-left card-glow transition-transform duration-200 hover:-translate-y-0.5 hover:border-primary/50 md:col-span-1"
+          >
+            <div className="flex items-center justify-between">
+              <div className="w-full">
+                <p className="text-xs text-muted-foreground">Finance</p>
+              </div>
+              <Wallet className="h-8 w-8 text-primary opacity-30" />
+            </div>
+          </button>
         </div>
+
+        <Dialog open={showFinanceReportDialog} onOpenChange={setShowFinanceReportDialog}>
+          <DialogContent className="max-w-xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-foreground">
+                <Sparkles className="h-4 w-4 text-primary" /> Financial Report
+              </DialogTitle>
+              <DialogDescription>
+                Generate a PDF report for a specific period with AI-guided recommendations.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Start date</label>
+                  <Input type="date" value={financeReportStart} onChange={(e) => setFinanceReportStart(e.target.value)} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">End date</label>
+                  <Input type="date" value={financeReportEnd} onChange={(e) => setFinanceReportEnd(e.target.value)} />
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border/50 bg-secondary/20 p-4">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Earnings</p>
+                    <p className="mt-1 font-semibold text-green-500">KSH {getFinanceMetrics().earnings.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Spendings</p>
+                    <p className="mt-1 font-semibold text-red-500">KSH {getFinanceMetrics().spendings.toLocaleString()}</p>
+                  </div>
+                </div>
+                <div className="mt-4 rounded-lg border border-border/50 bg-background/70 p-3">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">AI Summary</p>
+                  <p className="mt-2 text-sm text-foreground">
+                    {getFinanceMetrics().net >= 0
+                      ? 'The business is making a healthy net gain. Keep investing in deposit campaigns and maintain strict approval rules for large payouts.'
+                      : 'The cash flow is currently under pressure. Reduce discretionary payouts, tighten approval thresholds, and push more deposit-driving activity before approving more spend.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowFinanceReportDialog(false)}>Close</Button>
+              <Button onClick={generateFinanceReportPdf} className="bg-primary text-primary-foreground">
+                <Download className="mr-2 h-4 w-4" /> Generate PDF
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <Tabs value={adminTab} onValueChange={handleTabChange}>
           <TabsList className="mb-6 bg-secondary grid w-full grid-cols-6">
