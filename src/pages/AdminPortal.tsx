@@ -3,7 +3,7 @@ import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Trash2, CheckCircle, XCircle, Clock, DollarSign, Users, UserPlus, BarChart3, Trophy, Settings, RefreshCw, Edit2, Save, ArrowDown, ArrowUp, Play, Pause, Square, Lock, Unlock, Shield, Zap, Upload, Image as ImageIcon, Loader2, Megaphone, Calendar, Download, Ban, Flame, ArrowRightLeft } from "lucide-react";
+import { Plus, Trash2, CheckCircle, XCircle, Clock, DollarSign, Users, UserPlus, BarChart3, Trophy, Settings, RefreshCw, Edit2, Save, ArrowDown, ArrowUp, Play, Pause, Square, Lock, Unlock, Shield, Zap, Upload, Image as ImageIcon, Loader2, Megaphone, Download, Ban, Flame, ArrowRightLeft } from "lucide-react";
 import { type MatchMarkets } from "@/components/MatchCard";
 import { useMatches } from "@/context/MatchContext";
 import { useBets, type PlacedBet } from "@/context/BetContext";
@@ -17,7 +17,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { calculateMatchMinute } from "@/lib/gameTimeCalculator";
 import balanceSyncService from "@/lib/balanceSyncService";
 import { formatDateInEAT, formatTransactionDateInEAT, formatTimeInEAT } from "@/lib/timezoneFormatter";
-import { MatchEventEditor } from "@/components/MatchEventEditor";
 import { ActiveMembers } from "@/components/ActiveMembers";
 import { FetchGamesFetchModal } from "@/components/FetchGamesFetchModal";
 import { EarningsCalculator } from "@/components/EarningsCalculator";
@@ -243,11 +242,6 @@ const AdminPortal = () => {
         return normalized.replace(/_/g, " ").toUpperCase();
     }
   };
-  const [selectedGameForEvents, setSelectedGameForEvents] = useState<{
-    id: string;
-    name: string;
-    kickoffTime: string;
-  } | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editingUserData, setEditingUserData] = useState<Record<string, any>>({});
   const [showUserTransactionsDialog, setShowUserTransactionsDialog] = useState(false);
@@ -2276,6 +2270,40 @@ const AdminPortal = () => {
     { icon: Trophy, label: "Games Today", value: games.length.toString(), color: "text-gold" },
   ];
 
+  const dailySignupGroups = (() => {
+    const grouped: Record<string, any[]> = {};
+
+    getAllUsers().forEach((user: any) => {
+      const rawDate = user.createdAt || user.joinDate || user.created_at;
+      if (!rawDate) return;
+
+      const date = new Date(rawDate);
+      if (Number.isNaN(date.getTime())) return;
+
+      const toLocalISOString = (d: Date) => {
+        const offset = d.getTimezoneOffset();
+        return new Date(d.getTime() - offset * 60000).toISOString().slice(0, 10);
+      };
+
+      const dayKey = toLocalISOString(date);
+      grouped[dayKey] = grouped[dayKey] || [];
+      grouped[dayKey].push(user);
+    });
+
+    return Object.entries(grouped)
+      .map(([date, usersForDay]) => ({
+        date,
+        users: usersForDay.sort((a: any, b: any) => {
+          const aTime = new Date(a.createdAt || a.joinDate || a.created_at || 0).getTime();
+          const bTime = new Date(b.createdAt || b.joinDate || b.created_at || 0).getTime();
+          return bTime - aTime;
+        }),
+      }))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  })();
+
+  const [selectedSignupDate, setSelectedSignupDate] = useState<string | null>(null);
+
   const stopDarajaTestPolling = () => {
     if (darajaTestIntervalRef.current) {
       clearInterval(darajaTestIntervalRef.current);
@@ -2520,24 +2548,21 @@ const AdminPortal = () => {
         </div>
 
         <Tabs value={adminTab} onValueChange={handleTabChange}>
-          <TabsList className="mb-6 bg-secondary grid w-full grid-cols-7">
+          <TabsList className="mb-6 bg-secondary grid w-full grid-cols-6">
             <TabsTrigger value="games" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Trophy className="mr-1 h-4 w-4" /> Games
             </TabsTrigger>
-            <TabsTrigger value="events" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Calendar className="mr-1 h-4 w-4" /> Events
-            </TabsTrigger>
             <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Users className="mr-1 h-4 w-4" /> Users
-            </TabsTrigger>
-            <TabsTrigger value="broadcast" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Megaphone className="mr-1 h-4 w-4" /> Broadcast
             </TabsTrigger>
             <TabsTrigger value="earnings" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BarChart3 className="mr-1 h-4 w-4" /> Earnings
             </TabsTrigger>
             <TabsTrigger value="transactions" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <DollarSign className="mr-1 h-4 w-4" /> Transactions
+            </TabsTrigger>
+            <TabsTrigger value="signups" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <UserPlus className="mr-1 h-4 w-4" /> Signups
             </TabsTrigger>
             <TabsTrigger value="bets" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Trophy className="mr-1 h-4 w-4" /> Bets
@@ -3381,22 +3406,6 @@ const AdminPortal = () => {
                           Mark Live
                         </Button>
                       )}
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={() => {
-                          setSelectedGameForEvents({
-                            id: game.id,
-                            name: `${game.homeTeam} vs ${game.awayTeam}`,
-                            kickoffTime: game.time,
-                          });
-                          setAdminTab("events");
-                        }}
-                        title="Configure automated match events"
-                        className="border-primary/50 hover:bg-primary/10"
-                      >
-                        <Zap className="h-4 w-4 text-primary" />
-                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => toggleHot(game.id)} title={game.isHot ? "Unmark as Hot" : "Mark as Hot"}>
                         <Flame className={`h-4 w-4 ${game.isHot ? 'text-orange-500 fill-orange-500' : 'text-muted-foreground'}`} />
                       </Button>
@@ -3640,93 +3649,6 @@ const AdminPortal = () => {
                 );
               })()}
             </div>
-          </TabsContent>
-
-          <TabsContent value="events" className="space-y-6">
-            {selectedGameForEvents ? (
-              <div className="space-y-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setSelectedGameForEvents(null)}
-                  className="mb-4"
-                >
-                  ← Back to Games
-                </Button>
-                <MatchEventEditor
-                  gameId={selectedGameForEvents.id}
-                  gameName={selectedGameForEvents.name}
-                  kickoffTime={selectedGameForEvents.kickoffTime}
-                  onClose={() => setSelectedGameForEvents(null)}
-                  adminPhone={loggedInUser?.phone || ""}
-                />
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <h3 className="font-display text-sm font-bold uppercase tracking-wider text-foreground">
-                  Match Event Scheduler
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Select a game to configure automated match events for the fixture.
-                </p>
-
-                {games && games.length > 0 ? (
-                  <div className="grid gap-3">
-                    {games
-                      .filter((game) => {
-                        const id = game.id || game.game_id || '';
-                        return (
-                          !id.startsWith('af-') &&
-                          !id.startsWith('ab-') &&
-                          (game.status === 'upcoming' || game.status === 'live')
-                        );
-                      })
-                      .map((game) => {
-                        const homeTeam = game.homeTeam || game.home_team || 'Home';
-                        const awayTeam = game.awayTeam || game.away_team || 'Away';
-                        return (
-                          <Card
-                            key={game.id}
-                            className="border-primary/20 bg-card/50 p-4 hover:border-primary/50 transition cursor-pointer"
-                            onClick={() =>
-                              setSelectedGameForEvents({
-                                id: game.id,
-                                name: `${homeTeam} vs ${awayTeam}`,
-                                kickoffTime: game.time,
-                              })
-                            }
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-semibold">
-                                  {homeTeam} vs {awayTeam}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {formatTimeInEAT(game.time)}
-                                </p>
-                              </div>
-                              <Badge variant="outline">
-                                {game.status === "live" && (
-                                  <span className="text-green-400">LIVE</span>
-                                )}
-                                {game.status === "upcoming" && (
-                                  <span className="text-blue-400">UPCOMING</span>
-                                )}
-                                {game.status === "finished" && (
-                                  <span className="text-gray-400">FINISHED</span>
-                                )}
-                              </Badge>
-                            </div>
-                          </Card>
-                        );
-                      })}
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-border/50 bg-card p-8 text-center text-muted-foreground">
-                    No games available. Create a game first in the Games tab.
-                  </div>
-                )}
-              </div>
-            )}
           </TabsContent>
 
           <TabsContent value="users" className="space-y-6">
@@ -4158,127 +4080,6 @@ const AdminPortal = () => {
             </DialogContent>
           </Dialog>
 
-          <TabsContent value="broadcast" className="space-y-6">
-            <div className="mb-4">
-              <h3 className="font-display text-sm font-bold uppercase tracking-wider text-foreground">SMS Broadcast</h3>
-              <p className="mt-1 text-xs text-muted-foreground">Send one message to all users or to a filtered audience.</p>
-            </div>
-
-            <Card className="border-border bg-card p-4 space-y-4">
-              <div className="grid gap-3 md:grid-cols-2">
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Search (name, username, phone)</label>
-                  <Input
-                    className="mt-1"
-                    value={broadcastFilters.searchTerm}
-                    onChange={(e) => setBroadcastFilters((prev) => ({ ...prev, searchTerm: e.target.value }))}
-                    placeholder="e.g. denis or 2547..."
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Activation Status</label>
-                  <select
-                    className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={broadcastFilters.activationStatus}
-                    onChange={(e) => setBroadcastFilters((prev) => ({ ...prev, activationStatus: e.target.value }))}
-                  >
-                    <option value="all">All</option>
-                    <option value="activated">Activated Only</option>
-                    <option value="not_activated">Not Activated Only</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Betting Activity</label>
-                  <select
-                    className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={broadcastFilters.bettingStatus}
-                    onChange={(e) => setBroadcastFilters((prev) => ({ ...prev, bettingStatus: e.target.value }))}
-                  >
-                    <option value="all">All</option>
-                    <option value="with_bets">Users With Bets</option>
-                    <option value="no_bets">Users Without Bets</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Minimum Account Balance (KSH)</label>
-                  <Input
-                    className="mt-1"
-                    type="number"
-                    min="0"
-                    value={broadcastFilters.minBalance}
-                    onChange={(e) => setBroadcastFilters((prev) => ({ ...prev, minBalance: e.target.value }))}
-                    placeholder="Leave empty for any"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Minimum Total Winnings (KSH)</label>
-                  <Input
-                    className="mt-1"
-                    type="number"
-                    min="0"
-                    value={broadcastFilters.minTotalWinnings}
-                    onChange={(e) => setBroadcastFilters((prev) => ({ ...prev, minTotalWinnings: e.target.value }))}
-                    placeholder="Leave empty for any"
-                  />
-                </div>
-
-                <div className="flex items-end">
-                  <label className="inline-flex items-center gap-2 text-sm text-foreground">
-                    <input
-                      type="checkbox"
-                      checked={broadcastFilters.includeAdmins}
-                      onChange={(e) => setBroadcastFilters((prev) => ({ ...prev, includeAdmins: e.target.checked }))}
-                    />
-                    Include admin accounts
-                  </label>
-                </div>
-              </div>
-
-              <div className="rounded-md border border-border bg-secondary/40 p-3 text-sm">
-                <p className="font-medium text-foreground">Recipients Preview: {previewBroadcastRecipients.length}</p>
-                <p className="text-xs text-muted-foreground mt-1">The message will be sent only to users matching the current filters.</p>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Broadcast Message</label>
-                <textarea
-                  className="mt-1 min-h-[140px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  maxLength={480}
-                  value={broadcastMessage}
-                  onChange={(e) => setBroadcastMessage(e.target.value)}
-                  placeholder="Type the SMS to send..."
-                />
-                <p className="mt-1 text-xs text-muted-foreground">{broadcastMessage.length}/480 characters</p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Button variant="hero" disabled={sendingBroadcast || previewBroadcastRecipients.length === 0} onClick={handleSendBroadcast}>
-                  {sendingBroadcast ? (
-                    <><Clock className="mr-2 h-4 w-4 animate-spin" /> Sending...</>
-                  ) : (
-                    <><Megaphone className="mr-2 h-4 w-4" /> Send Broadcast SMS</>
-                  )}
-                </Button>
-                {previewBroadcastRecipients.length === 0 && (
-                  <span className="text-xs text-red-500">No recipients match current filters</span>
-                )}
-              </div>
-
-              {broadcastResult && (
-                <div className="rounded-md border border-border bg-background p-3 text-sm">
-                  <p className="font-medium text-foreground">{broadcastResult.message || 'Broadcast finished'}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Matched: {broadcastResult.matchedRecipients || 0} | Sent: {broadcastResult.sent || 0} | Failed: {broadcastResult.failed || 0}
-                  </p>
-                </div>
-              )}
-            </Card>
-          </TabsContent>
-
           <TabsContent value="earnings" className="space-y-6">
             <EarningsCalculator />
           </TabsContent>
@@ -4491,6 +4292,101 @@ const AdminPortal = () => {
                 <div className="text-6xl text-gold/30">💰</div>
               </div>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="signups" className="space-y-6">
+            <div className="mb-4">
+              <h3 className="font-display text-sm font-bold uppercase tracking-wider text-foreground">Daily Signups</h3>
+              <p className="mt-1 text-xs text-muted-foreground">Review how many users signed up each day and open the accounts for that date.</p>
+            </div>
+
+            {dailySignupGroups.length === 0 ? (
+              <div className="rounded-xl border border-border/50 bg-card p-8 text-center text-muted-foreground">
+                No signups recorded yet.
+              </div>
+            ) : (
+              <div className="space-y-5">
+                <Card className="border-border bg-card p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Signup rate</h4>
+                    <span className="text-xs text-primary font-medium">
+                      Peak: {Math.max(...dailySignupGroups.map((group) => group.users.length))} users
+                    </span>
+                  </div>
+
+                  <div className="flex h-40 items-end gap-3 rounded-lg border border-border/50 bg-secondary/30 p-3">
+                    {dailySignupGroups.slice(0, 7).map((group) => {
+                      const barHeight = Math.max((group.users.length / Math.max(...dailySignupGroups.map((item) => item.users.length), 1)) * 100, 8);
+                      const isSelected = selectedSignupDate === group.date;
+
+                      return (
+                        <div key={group.date} className="flex flex-1 flex-col items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedSignupDate(isSelected ? null : group.date)}
+                            className="flex h-full w-full flex-col items-center justify-end gap-2 rounded-md"
+                            title={`${group.users.length} signups on ${new Date(`${group.date}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`}
+                          >
+                            <div
+                              className={`w-full rounded-t-md transition-all duration-200 ${isSelected ? 'bg-primary shadow-lg shadow-primary/30' : 'bg-primary/70 hover:bg-primary'}`}
+                              style={{ height: `${barHeight}%` }}
+                            />
+                          </button>
+                          <span className="text-[10px] text-muted-foreground">
+                            {new Date(`${group.date}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+
+                {dailySignupGroups.map((group) => (
+                  <Card key={group.date} className="border-border bg-card p-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground">Signup date</p>
+                        <h4 className="mt-1 text-base font-semibold text-foreground">
+                          {new Date(`${group.date}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </h4>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <Badge className="bg-primary/10 text-primary hover:bg-primary/15">
+                          {group.users.length} signup{group.users.length === 1 ? '' : 's'}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant={selectedSignupDate === group.date ? 'secondary' : 'hero'}
+                          onClick={() => setSelectedSignupDate(selectedSignupDate === group.date ? null : group.date)}
+                        >
+                          {selectedSignupDate === group.date ? 'Hide' : 'View'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {selectedSignupDate === group.date && (
+                      <div className="mt-4 space-y-2 rounded-lg border border-border/50 bg-secondary/30 p-3">
+                        {group.users.map((user: any) => (
+                          <div key={user.id || `${user.phone}-${user.email}`} className="flex flex-col gap-1 rounded-md border border-border/50 bg-background/60 p-3 md:flex-row md:items-center md:justify-between">
+                            <div>
+                              <p className="font-medium text-foreground">{user.name || 'Unnamed User'}</p>
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                {user.phone && <span>{user.phone}</span>}
+                                {user.email && <span className="ml-2">{user.email}</span>}
+                              </div>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {user.username ? `@${user.username}` : 'No username'}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="bets" className="space-y-6">
