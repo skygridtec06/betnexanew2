@@ -2266,7 +2266,6 @@ const AdminPortal = () => {
   const stats: Array<{ icon: any; label: string; value: string; color: string; note?: string }> = [
     { icon: Users, label: "Total Users", value: totalUsers.toLocaleString(), color: "text-primary" },
     { icon: UserPlus, label: "Signed Up Today", value: todaySignups.toLocaleString(), color: "text-primary" },
-    { icon: BarChart3, label: "Active Bets", value: activeBets.toLocaleString(), color: "text-primary" },
     { icon: Trophy, label: "Games Today", value: games.length.toString(), color: "text-gold" },
   ];
 
@@ -4446,7 +4445,7 @@ const AdminPortal = () => {
                         <div className="space-y-3 pb-8 border-b-2 border-yellow-500/30">
                           <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm py-2 flex items-center justify-between">
                             <h4 className="text-xs font-bold uppercase tracking-wider text-yellow-500 flex items-center gap-2">
-                              <Clock className="h-4 w-4" /> Open Bets ({openBets.length})
+                              <Clock className="h-4 w-4" /> OPEN BETS
                             </h4>
                             {markedBets.size > 0 && (
                               <div className="flex gap-2 justify-end">
