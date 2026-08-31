@@ -138,6 +138,11 @@ function normalizeLabel(s) {
   return String(s || '').trim().toLowerCase();
 }
 
+function isPrematchFixture(fixture) {
+  const short = fixture?.fixture?.status?.short;
+  return short === 'NS' || short === 'TBD' || short === 'SCHEDULED' || short === 'PST';
+}
+
 function num(v) {
   const n = parseFloat(v);
   return Number.isFinite(n) && n >= 1.01 ? +n.toFixed(2) : null;

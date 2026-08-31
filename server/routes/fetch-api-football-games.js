@@ -138,6 +138,11 @@ function normalizeLabel(s) {
   return String(s || '').trim().toLowerCase();
 }
 
+function isPrematchFixture(fixture) {
+  const short = fixture?.fixture?.status?.short;
+  return short === 'NS' || short === 'TBD' || short === 'SCHEDULED' || short === 'PST';
+}
+
 function num(v) {
   const n = parseFloat(v);
   return Number.isFinite(n) && n >= 1.01 ? +n.toFixed(2) : null;
@@ -422,8 +427,8 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
         }
 
         // Filter to only Not Started (prematch) fixtures
-        const prematchFixtures = allFixtures.filter(f => f?.fixture?.status?.short === 'NS');
-        console.log(`   ⚽ ${prematchFixtures.length} prematch (NS) fixtures on ${dateStr}`);
+        const prematchFixtures = allFixtures.filter(isPrematchFixture);
+        console.log(`   ⚽ ${prematchFixtures.length} upcoming fixtures on ${dateStr} (statuses: NS/TBD/SCHEDULED/PST)`);
 
         if (prematchFixtures.length === 0) {
           console.log(`   ⚠️ No prematch fixtures on ${dateStr}`);
@@ -471,8 +476,7 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
             let marketOdds = chooseBestOddsSet(oddsRows);
 
             if (!marketOdds || !marketOdds.home || !marketOdds.draw || !marketOdds.away) {
-              // Some fixtures have odds data but not valid 1X2 market labels.
-              // Generate deterministic seeded odds instead of dropping the match.
+              console.log(`   ⚠️ No usable 1X2 odds for ${homeTeam} vs ${awayTeam}; generating fallback odds`);
               marketOdds = generateSeededOdds(fixtureId);
             }
 
