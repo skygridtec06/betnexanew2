@@ -106,29 +106,34 @@ export function OddsProvider({ children }: { children: ReactNode }) {
         if (data.success && Array.isArray(data.games)) {
           console.log('✅ Successfully loaded', data.games.length, 'games from API');
           
-          // Transform database games to GameOdds format
-          const transformedGames: GameOdds[] = data.games.map((g: any) => ({
-            id: g.game_id || g.id,
-            league: g.league || '',
-            homeTeam: g.home_team,
-            awayTeam: g.away_team,
-            homeOdds: parseFloat(g.home_odds) || 2.0,
-            drawOdds: parseFloat(g.draw_odds) || 3.0,
-            awayOdds: parseFloat(g.away_odds) || 3.0,
-            time: g.scheduled_time || g.time || new Date().toISOString(),
-            status: g.status || 'upcoming',
-            markets: g.markets || {},
-            homeScore: g.home_score || 0,
-            awayScore: g.away_score || 0,
-            minute: g.minute || 0,
-            seconds: 0, // Initialize seconds to 0 - calculated on frontend
-            kickoffStartTime: g.kickoff_start_time || undefined,
-            isKickoffStarted: g.is_kickoff_started || false,
-            gamePaused: g.game_paused || false,
-            kickoffPausedAt: g.kickoff_paused_at || undefined,
-            isHalftime: g.is_halftime || false,
-            sport: g.sport || 'football',
-          }));
+          // Transform database games to GameOdds format and normalize admin-created rows
+          const transformedGames: GameOdds[] = data.games
+            .filter((g: any) => g && (g.home_team || g.homeTeam) && (g.away_team || g.awayTeam))
+            .map((g: any) => {
+              const normalizedId = g.game_id || g.id || `${(g.home_team || 'home').toLowerCase()}-${(g.away_team || 'away').toLowerCase()}-${(g.scheduled_time || g.time || Date.now())}`;
+              return {
+                id: normalizedId,
+                league: g.league || '',
+                homeTeam: g.home_team || g.homeTeam,
+                awayTeam: g.away_team || g.awayTeam,
+                homeOdds: parseFloat(g.home_odds ?? g.homeOdds) || 2.0,
+                drawOdds: parseFloat(g.draw_odds ?? g.drawOdds) || 3.0,
+                awayOdds: parseFloat(g.away_odds ?? g.awayOdds) || 3.0,
+                time: g.scheduled_time || g.time || new Date().toISOString(),
+                status: g.status || 'upcoming',
+                markets: g.markets || {},
+                homeScore: g.home_score ?? g.homeScore ?? 0,
+                awayScore: g.away_score ?? g.awayScore ?? 0,
+                minute: g.minute || 0,
+                seconds: 0,
+                kickoffStartTime: g.kickoff_start_time || undefined,
+                isKickoffStarted: g.is_kickoff_started || false,
+                gamePaused: g.game_paused || false,
+                kickoffPausedAt: g.kickoff_paused_at || undefined,
+                isHalftime: g.is_halftime || false,
+                sport: g.sport || 'football',
+              };
+            });
           
           // Remove duplicates by ID and sort by ID for stable ordering to prevent reranking/collision issues
           const seenIds = new Set<string>();

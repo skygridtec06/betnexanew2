@@ -903,14 +903,18 @@ router.post('/daraja/initiate', async (req, res) => {
         success: false,
         message: 'M-Pesa STK is temporarily unavailable. Please use the Paybill deposit option below instead.',
         error: message,
-        fallback: 'offline_paybill'
+        fallback: 'offline_paybill',
+        gatewayStatus: 'daraja_down',
+        retryable: true
       });
     }
 
     return res.status(500).json({
       success: false,
       message: message,
-      error: message
+      error: message,
+      gatewayStatus: 'unknown_error',
+      retryable: true
     });
   }
 });

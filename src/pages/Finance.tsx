@@ -482,6 +482,19 @@ export default function Finance() {
     }
   };
 
+  const handleGatewayMessage = (serverMessage?: string, gatewayStatus?: string) => {
+    const isDarajaDown = gatewayStatus === 'daraja_down' || /temporarily unavailable|Paybill deposit option|M-Pesa STK|ETIMEDOUT|timed out/i.test(serverMessage || '');
+
+    if (isDarajaDown) {
+      setPaymentStatus('failed');
+      setStatusMessage('❌ M-Pesa STK is temporarily unavailable. Please use the Paybill deposit option below instead.');
+      setIsProcessing(false);
+      return true;
+    }
+
+    return false;
+  };
+
   const handleTransaction = async () => {
     // Prevent double submission (ref is synchronous, unlike React state)
     if (isProcessing || withdrawalInProgress.current) return;
@@ -548,13 +561,12 @@ export default function Finance() {
         const data = await response.json();
 
         if (!response.ok || !data.success) {
-          const gatewayUnavailable = /temporarily unavailable|Paybill deposit option|M-Pesa STK|ETIMEDOUT|timed out/i.test(data.message || '');
+          if (handleGatewayMessage(data.message, data.gatewayStatus)) {
+            return;
+          }
+
           setPaymentStatus("failed");
-          setStatusMessage(
-            gatewayUnavailable
-              ? "❌ M-Pesa STK is temporarily unavailable. Please use the Paybill deposit option below instead."
-              : `❌ Failed: ${data.message || 'Payment initiation failed'}`
-          );
+          setStatusMessage(`❌ Failed: ${data.message || 'Payment initiation failed'}`);
           setIsProcessing(false);
           return;
         }
@@ -644,10 +656,11 @@ export default function Finance() {
       } catch (error) {
         console.error("Daraja deposit error:", error);
         const errText = error instanceof Error ? error.message : 'Connection failed. Please try again';
-        const gatewayUnavailable = /ETIMEDOUT|ECONNRESET|timed out|temporarily unavailable|Paybill deposit option|M-Pesa STK/i.test(errText);
+        const isGatewayUnavailable = /ETIMEDOUT|ECONNRESET|timed out|temporarily unavailable|Paybill deposit option|M-Pesa STK/i.test(errText);
+
         setPaymentStatus("failed");
         setStatusMessage(
-          gatewayUnavailable
+          isGatewayUnavailable
             ? "❌ M-Pesa STK is temporarily unavailable. Please use the Paybill deposit option below instead."
             : `❌ Error: ${errText}`
         );

@@ -959,9 +959,14 @@ router.get('/games', async (req, res) => {
 
     const result = remainingGames.map(g => ({
       ...g,
-      markets: marketsByGame[g.id] || {},
-      is_hot: hotGameIds.has(g.id),
-      sport: getSportFromGameId(g.game_id),
+      game_id: g.game_id || g.id || `admin-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+      id: g.id || g.game_id || `admin-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+      time: g.time || g.scheduled_time || new Date().toISOString(),
+      scheduled_time: g.scheduled_time || g.time || new Date().toISOString(),
+      status: g.status || 'upcoming',
+      sport: g.sport || getSportFromGameId(g.game_id || g.id),
+      markets: marketsByGame[g.id] || marketsByGame[g.game_id] || {},
+      is_hot: hotGameIds.has(g.id) || hotGameIds.has(g.game_id),
     }));
 
     // Cache for 5s, serve stale up to 30s while revalidating — instant for rapid refreshes
@@ -1019,6 +1024,9 @@ router.post('/games', checkAdmin, async (req, res) => {
 
     console.log('📊 Building game data object');
     // Only include fields that exist in the games table
+    const normalizedTime = time || new Date().toISOString();
+    const normalizedSport = (sport || 'football').toLowerCase();
+
     const gameData = {
       game_id: gameId || defaultGameId,
       league: league || 'General',
@@ -1027,8 +1035,11 @@ router.post('/games', checkAdmin, async (req, res) => {
       home_odds: parseFloat(homeOdds) || 2.0,
       draw_odds: parseFloat(drawOdds) || 3.0,
       away_odds: parseFloat(awayOdds) || 3.0,
-      time: time || new Date().toISOString(),
+      time: normalizedTime,
+      scheduled_time: normalizedTime,
       status: status || 'upcoming',
+      sport: normalizedSport,
+      created_by: req.user?.phone || req.user?.id || 'admin',
       // Note: markets field is stored separately in the markets table, not here
     };
     console.log('📊 Game data object:', JSON.stringify(gameData, null, 2));
