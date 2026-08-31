@@ -896,7 +896,7 @@ router.post('/daraja/initiate', async (req, res) => {
     const message = error && error.message ? error.message : 'Failed to initiate Daraja STK push';
     console.error('[daraja/initiate] Error:', message);
 
-    const isGatewayUnavailable = /(ETIMEDOUT|ECONNRESET|ECONNREFUSED|timed out|connect .*443|Daraja .*failed|api\.safaricom\.co\.ke)/i.test(message);
+    const isGatewayUnavailable = /(ETIMEDOUT|ECONNRESET|ECONNREFUSED|timed out|connect .*443|Daraja .*failed|Daraja request failed with status \d+|HTTP 400|HTTP 401|HTTP 403|api\.safaricom\.co\.ke|M-Pesa STK .* unavailable|temporarily unavailable)/i.test(message);
 
     if (isGatewayUnavailable) {
       return res.status(503).json({
