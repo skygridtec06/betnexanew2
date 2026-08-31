@@ -398,6 +398,12 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
     }
 
     const games = [];
+    const stats = {
+      totalFixturesSeen: 0,
+      upcomingFixturesSeen: 0,
+      oddsEntriesSeen: 0,
+      fallbackFixturesAdded: 0
+    };
 
     // Build list of dates to fetch (today + next 2 days)
     const datesToFetch = [];
@@ -419,6 +425,7 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
         });
 
         const allFixtures = fixturesJson.response || [];
+        stats.totalFixturesSeen += allFixtures.length;
         console.log(`   📊 Total fixtures on ${dateStr}: ${allFixtures.length}`);
 
         if (allFixtures.length === 0) {
@@ -428,6 +435,7 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
 
         // Filter to only Not Started (prematch) fixtures
         const prematchFixtures = allFixtures.filter(isPrematchFixture);
+        stats.upcomingFixturesSeen += prematchFixtures.length;
         console.log(`   ⚽ ${prematchFixtures.length} upcoming fixtures on ${dateStr} (statuses: NS/TBD/SCHEDULED/PST)`);
 
         if (prematchFixtures.length === 0) {
@@ -439,6 +447,7 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
         console.log(`\n📈 Fetching bulk odds for ${dateStr}...`);
         const oddsJson = await apiGetTest('/odds', { date: dateStr, timezone: TZ });
         const allOddsPages = oddsJson.response || [];
+        stats.oddsEntriesSeen += allOddsPages.length;
         console.log(`   📊 Odds entries for ${dateStr}: ${allOddsPages.length}`);
 
         // Build a map: fixtureId -> odds rows
@@ -549,6 +558,7 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
               continue;
             }
           }
+          stats.fallbackFixturesAdded += remainingFixtures.length;
           console.log(`   ✅ Added ${remainingFixtures.length} fixtures with fallback odds`);
         }
       } catch (dateErr) {
@@ -563,6 +573,9 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
     console.log(`   🚀 Estimated improvement: 5-7x more matches than before (was ~20/day, now ${Math.round(games.length / DAYS_TO_FETCH)}/day)`);
     console.log(`   💾 API requests used: ~${Math.ceil(DAYS_TO_FETCH * 1.5)} (vs ~${Math.ceil(DAYS_TO_FETCH * 10)} before optimization)`);
 
+    console.log('🔁 Runtime marker: api-football-preview-v2');
+    console.log('📊 Preview stats:', stats);
+
     if (games.length === 0) {
       return res.json({
         success: true,
@@ -571,7 +584,9 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
         games: [],
         dates_checked: datesToFetch,
         next_step: 'Try again later or check API Football for available matches',
-        optimization_notes: 'Endpoint is optimized for free tier with pagination (per_page=100) and bulk odds fetching'
+        optimization_notes: 'Endpoint is optimized for free tier with pagination (per_page=100) and bulk odds fetching',
+        runtime_marker: 'api-football-preview-v2',
+        stats
       });
     }
 
@@ -586,7 +601,9 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
       games: games,
       optimization_notes: '✅ Optimized for free tier: pagination (100/page), bulk odds, reduced per-fixture calls',
       next_step: 'Call /api/admin/fetch-api-football/execute with the games to add them to the site',
-      customize_days: 'Send { "days": N } in request body to fetch N days (default: 15, max: 30)'
+      customize_days: 'Send { "days": N } in request body to fetch N days (default: 15, max: 30)',
+      runtime_marker: 'api-football-preview-v2',
+      stats
     });
 
   } catch (error) {

@@ -352,6 +352,12 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
     }
 
     const games = [];
+    const stats = {
+      totalFixturesSeen: 0,
+      upcomingFixturesSeen: 0,
+      oddsEntriesSeen: 0,
+      fallbackFixturesAdded: 0
+    };
 
     // Build list of dates to fetch (today + next 2 days)
     const datesToFetch = [];
