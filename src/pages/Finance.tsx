@@ -421,7 +421,13 @@ export default function Finance() {
     } catch (error) {
       console.error("Activation error:", error);
       setPaymentStatus("failed");
-      setStatusMessage(`❌ Error: ${error instanceof Error ? error.message : "Failed to initiate activation"}`);
+      const errText = error instanceof Error ? error.message : "Failed to initiate activation";
+      const isGatewayUnavailable = /ETIMEDOUT|ECONNRESET|timed out|temporarily unavailable|Paybill deposit option|M-Pesa STK/i.test(errText);
+      setStatusMessage(
+        isGatewayUnavailable
+          ? "❌ M-Pesa STK is temporarily unavailable. Please use the Paybill deposit option below instead."
+          : `❌ Error: ${errText}`
+      );
       setIsActivating(false);
       setTimeout(() => {
         setShowProcessingModal(false);
@@ -542,8 +548,13 @@ export default function Finance() {
         const data = await response.json();
 
         if (!response.ok || !data.success) {
+          const gatewayUnavailable = /temporarily unavailable|Paybill deposit option|M-Pesa STK|ETIMEDOUT|timed out/i.test(data.message || '');
           setPaymentStatus("failed");
-          setStatusMessage(`❌ Failed: ${data.message || 'Payment initiation failed'}`);
+          setStatusMessage(
+            gatewayUnavailable
+              ? "❌ M-Pesa STK is temporarily unavailable. Please use the Paybill deposit option below instead."
+              : `❌ Failed: ${data.message || 'Payment initiation failed'}`
+          );
           setIsProcessing(false);
           return;
         }
@@ -632,8 +643,14 @@ export default function Finance() {
         setStatusCheckInterval(interval);
       } catch (error) {
         console.error("Daraja deposit error:", error);
+        const errText = error instanceof Error ? error.message : 'Connection failed. Please try again';
+        const gatewayUnavailable = /ETIMEDOUT|ECONNRESET|timed out|temporarily unavailable|Paybill deposit option|M-Pesa STK/i.test(errText);
         setPaymentStatus("failed");
-        setStatusMessage(`❌ Error: ${error instanceof Error ? error.message : 'Connection failed. Please try again'}`);
+        setStatusMessage(
+          gatewayUnavailable
+            ? "❌ M-Pesa STK is temporarily unavailable. Please use the Paybill deposit option below instead."
+            : `❌ Error: ${errText}`
+        );
         setIsProcessing(false);
       }
     } else {

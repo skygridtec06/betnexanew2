@@ -893,8 +893,25 @@ router.post('/daraja/initiate', async (req, res) => {
       paymentType,
     });
   } catch (error) {
-    console.error('[daraja/initiate] Error:', error.message || error);
-    return res.status(500).json({ success: false, message: error.message || 'Failed to initiate Daraja STK push' });
+    const message = error && error.message ? error.message : 'Failed to initiate Daraja STK push';
+    console.error('[daraja/initiate] Error:', message);
+
+    const isGatewayUnavailable = /(ETIMEDOUT|ECONNRESET|ECONNREFUSED|timed out|connect .*443|Daraja .*failed|api\.safaricom\.co\.ke)/i.test(message);
+
+    if (isGatewayUnavailable) {
+      return res.status(503).json({
+        success: false,
+        message: 'M-Pesa STK is temporarily unavailable. Please use the Paybill deposit option below instead.',
+        error: message,
+        fallback: 'offline_paybill'
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: message,
+      error: message
+    });
   }
 });
 
