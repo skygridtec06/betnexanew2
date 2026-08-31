@@ -166,7 +166,7 @@ router.post('/payhero', async (req, res) => {
           // --- Credit user stakeable_balance (deposits go to stakeable) ---
           const { data: userRow, error: userFetchErr } = await supabase
             .from('users')
-            .select('stakeable_balance, withdrawable_balance, phone_number, username')
+            .select('stakeable_balance, withdrawable_balance, phone_number, username, created_at')
             .eq('id', user_id)
             .single();
 
@@ -223,7 +223,15 @@ router.post('/payhero', async (req, res) => {
                 console.log(`[PayHero Callback] 📞 Calling sendAdminDepositNotification(${smsPhone}, ${userRow.username}, ${creditAmount}, 'deposit', ${totalRevenue}, ${mpesaReceipt})`);
                 
                 const username = userRow.username || 'Unknown User';
-                const smsResult = await sendAdminDepositNotification(smsPhone, username, creditAmount, 'deposit', totalRevenue, mpesaReceipt);
+                const smsResult = await sendAdminDepositNotification(
+                  smsPhone,
+                  username,
+                  creditAmount,
+                  'deposit',
+                  totalRevenue,
+                  mpesaReceipt,
+                  userRow.created_at,
+                );
                 
                 console.log(`[PayHero Callback] 📨 Admin SMS Result: ${smsResult}`);
                 if (smsResult) {
