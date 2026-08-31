@@ -952,6 +952,14 @@ const AdminPortal = () => {
       const data = await response.json();
 
       if (data.success) {
+        if (data.duplicate) {
+          console.warn('ℹ️ Duplicate game ignored:', data.message || 'Game already exists');
+          setShowAddGame(false);
+          refreshGames();
+          alert('This game already exists in the system and was not duplicated.');
+          return;
+        }
+
         // Add game to local context for immediate UI update
         const gameData: GameOdds = {
           id: data.game.game_id || data.game.id,
@@ -1026,12 +1034,12 @@ const AdminPortal = () => {
           refreshGames();
         }, 500);
       } else {
-        console.error('API Error:', data);
-        alert(`Error: ${data.error || 'Failed to add game'}`);
+        console.warn('ℹ️ Non-fatal game add response:', data);
+        alert(`This game already exists or could not be created: ${data.error || 'No action taken.'}`);
       }
     } catch (error) {
       console.error('Error adding game:', error);
-      alert('Failed to add game. Check console for details.');
+      alert('Failed to add game. Please try again.');
     }
   };
 
@@ -1321,6 +1329,13 @@ const AdminPortal = () => {
       });
       const data = await response.json();
       if (data.success) {
+        if (data.duplicate) {
+          setParsedImportGames(prev => prev.map((g, i) => i === gameIdx ? { ...g, saving: false, saved: true, duplicate: true } : g));
+          console.warn('ℹ️ Import duplicate skipped:', data.message || 'Game already exists');
+          refreshGames();
+          return;
+        }
+
         setParsedImportGames(prev => prev.map((g, i) => i === gameIdx ? { ...g, saving: false, saved: true } : g));
         refreshGames();
       } else {
@@ -1328,7 +1343,8 @@ const AdminPortal = () => {
       }
     } catch (err: any) {
       setParsedImportGames(prev => prev.map((g, i) => i === gameIdx ? { ...g, saving: false } : g));
-      alert(`Failed to add ${pg.homeTeam} vs ${pg.awayTeam}: ${err.message}`);
+      console.warn(`ℹ️ Import skipped for ${pg.homeTeam} vs ${pg.awayTeam}: ${err.message}`);
+      alert(`This fixture already exists or could not be added: ${pg.homeTeam} vs ${pg.awayTeam}`);
     }
   };
 

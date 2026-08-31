@@ -1043,10 +1043,12 @@ router.post('/games', checkAdmin, async (req, res) => {
     
     if (existingGame) {
       console.warn('⚠️ Game with this ID already exists:', gameData.game_id);
-      return res.status(409).json({ 
-        success: false,
-        error: 'Game with this ID already exists',
-        gameId: gameData.game_id
+      return res.status(200).json({
+        success: true,
+        duplicate: true,
+        message: 'Game already exists in the system',
+        gameId: gameData.game_id,
+        game: { game_id: gameData.game_id }
       });
     }
 
@@ -1056,7 +1058,7 @@ router.post('/games', checkAdmin, async (req, res) => {
       if (gameDate) {
         const { data: teamDup } = await supabase
           .from('games')
-          .select('id, game_id')
+          .select('id, game_id, home_team, away_team, time')
           .ilike('home_team', gameData.home_team)
           .ilike('away_team', gameData.away_team)
           .gte('time', `${gameDate}T00:00:00`)
@@ -1066,10 +1068,12 @@ router.post('/games', checkAdmin, async (req, res) => {
 
         if (teamDup) {
           console.warn(`⚠️ Duplicate fixture found: ${gameData.home_team} vs ${gameData.away_team} on ${gameDate} (existing: ${teamDup.game_id})`);
-          return res.status(409).json({
-            success: false,
-            error: `${gameData.home_team} vs ${gameData.away_team} already exists for this date`,
-            existingGameId: teamDup.game_id
+          return res.status(200).json({
+            success: true,
+            duplicate: true,
+            message: `${gameData.home_team} vs ${gameData.away_team} already exists for this date`,
+            existingGameId: teamDup.game_id,
+            game: teamDup
           });
         }
       }
