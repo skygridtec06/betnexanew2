@@ -288,41 +288,78 @@ async function sendBanSms(phone, username) {
  * Sent to admin whenever a user deposits (deposit, activation fee, or priority fee).
  * Contains: amount, user phone, username, time, transaction type, M-Pesa code, and new total revenue.
  */
-async function sendAdminDepositNotification(userPhone, username, amount, transactionType, newTotalRevenue, mpesaReceipt) {
-  const adminPhone = process.env.ADMIN_SMS_PHONE || '0740176944';
+function formatSignupDateForSms(value) {
+  if (!value) return 'N/A';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return date.toLocaleDateString('en-KE', {
+    timeZone: 'Africa/Nairobi',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+}
+
+function formatAdminDepositNotificationMessage({
+  userPhone,
+  username,
+  amount,
+  transactionType,
+  newTotalRevenue,
+  mpesaReceipt,
+  signupDate,
+}) {
   const formattedAmount = Number(amount).toFixed(0);
   const formattedRevenue = Number(newTotalRevenue).toFixed(0);
   const timestamp = new Date().toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' });
-  
-  console.log(`\n[ADMIN_SMS] ========== ADMIN DEPOSIT NOTIFICATION ==========`);
-  console.log(`[ADMIN_SMS] Admin Phone: ${adminPhone}`);
-  console.log(`[ADMIN_SMS] User Phone: ${userPhone}`);
-  console.log(`[ADMIN_SMS] Username: ${username}`);
-  console.log(`[ADMIN_SMS] Amount: KSH ${formattedAmount}`);
-  console.log(`[ADMIN_SMS] Transaction Type: ${transactionType}`);
-  console.log(`[ADMIN_SMS] M-Pesa Receipt: ${mpesaReceipt || 'N/A'}`);
-  console.log(`[ADMIN_SMS] Total Revenue Today: KSH ${formattedRevenue}`);
-  
+  const signupDateText = formatSignupDateForSms(signupDate);
+
   let typeLabel = 'DEPOSIT';
   if (transactionType === 'activation') typeLabel = 'WITHDRAWAL ACTIVATION';
   else if (transactionType === 'priority') typeLabel = 'PRIORITY FEE';
   else if (transactionType === 'admin-deposit') typeLabel = 'ADMIN DEPOSIT';
-  
+
   // Use full M-Pesa receipt code (alphanumeric like UD4T08TBZH)
   let codeDisplay = '';
   if (mpesaReceipt) {
     codeDisplay = String(mpesaReceipt).trim();
   }
-  
-  const msg =
+
+  return (
     `New ${typeLabel}!\n` +
     `User: ${username}\n` +
+    `Signup Date: ${signupDateText}\n` +
     `Phone: ${userPhone}\n` +
     `Amount: KSH ${formattedAmount}\n` +
     `Time: ${timestamp}\n` +
     `Code: ${codeDisplay || 'N/A'}\n` +
-    `Total Revenue: KSH ${formattedRevenue}`;
-  
+    `Total Revenue: KSH ${formattedRevenue}`
+  );
+}
+
+async function sendAdminDepositNotification(userPhone, username, amount, transactionType, newTotalRevenue, mpesaReceipt, signupDate = null) {
+  const adminPhone = process.env.ADMIN_SMS_PHONE || '0740176944';
+  const msg = formatAdminDepositNotificationMessage({
+    userPhone,
+    username,
+    amount,
+    transactionType,
+    newTotalRevenue,
+    mpesaReceipt,
+    signupDate,
+  });
+
+  console.log(`\n[ADMIN_SMS] ========== ADMIN DEPOSIT NOTIFICATION ==========`);
+  console.log(`[ADMIN_SMS] Admin Phone: ${adminPhone}`);
+  console.log(`[ADMIN_SMS] User Phone: ${userPhone}`);
+  console.log(`[ADMIN_SMS] Username: ${username}`);
+  console.log(`[ADMIN_SMS] Signup Date: ${formatSignupDateForSms(signupDate)}`);
+  console.log(`[ADMIN_SMS] Amount: KSH ${Number(amount).toFixed(0)}`);
+  console.log(`[ADMIN_SMS] Transaction Type: ${transactionType}`);
+  console.log(`[ADMIN_SMS] M-Pesa Receipt: ${mpesaReceipt || 'N/A'}`);
+  console.log(`[ADMIN_SMS] Total Revenue Today: KSH ${Number(newTotalRevenue).toFixed(0)}`);
   console.log(`[ADMIN_SMS] Message prepared (${msg.length} chars)`);
   console.log(`[ADMIN_SMS] FULL MESSAGE:\n${msg}`);
   console.log(`[ADMIN_SMS] Sending to: ${adminPhone}`);
@@ -355,5 +392,7 @@ module.exports = {
   sendActivationSms,
   sendInactivityReminderSms,
   sendBanSms,
+  formatSignupDateForSms,
+  formatAdminDepositNotificationMessage,
   sendAdminDepositNotification,
 };

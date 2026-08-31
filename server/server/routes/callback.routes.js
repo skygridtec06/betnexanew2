@@ -821,7 +821,15 @@ router.post('/c2b-confirmation', async (req, res) => {
         ? revenueData.reduce((sum, dep) => sum + parseFloat(dep.amount || 0), 0)
         : 0;
 
-      sendAdminDepositNotification(user.phone_number, user.username || 'Unknown', amount, 'C2B Paybill', totalRevenue, mpesaReceipt).catch(() => {});
+      sendAdminDepositNotification(
+        user.phone_number,
+        user.username || 'Unknown',
+        amount,
+        'C2B Paybill',
+        totalRevenue,
+        mpesaReceipt,
+        user.created_at,
+      ).catch(() => {});
     } catch (_) {}
 
     console.log(`✅ [C2B CONFIRMATION] Complete - ${user.username} credited KSH ${amount}. New balance: KSH ${newBalance}`);

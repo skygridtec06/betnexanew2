@@ -427,7 +427,15 @@ async function ensureUserDarajaFunding({
       const username = user.username || 'Unknown User';
       console.log(`[ensureUserDarajaFunding] 📞 CALLING sendAdminDepositNotification...`);
       
-      const smsResult = await sendAdminDepositNotification(smsPhone, username, creditedAmount, paymentType, totalRevenue, mpesaReceipt);
+      const smsResult = await sendAdminDepositNotification(
+        smsPhone,
+        username,
+        creditedAmount,
+        paymentType,
+        totalRevenue,
+        mpesaReceipt,
+        user.created_at,
+      );
       
       console.log(`[ensureUserDarajaFunding] 📨 SMS Result: ${smsResult}`);
       if (smsResult) {
