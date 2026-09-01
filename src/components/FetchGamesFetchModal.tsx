@@ -39,7 +39,8 @@ export const FetchGamesFetchModal = ({ isOpen, onClose, onExecute }: FetchGamesF
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phone: adminPhone
+          phone: adminPhone,
+          days: 30
         })
       });
 
@@ -99,7 +100,7 @@ export const FetchGamesFetchModal = ({ isOpen, onClose, onExecute }: FetchGamesF
               </p>
               <Button onClick={handleFetch} className="w-full" size="lg">
                 <Download className="w-4 h-4 mr-2" />
-                Fetch Today's Matches (Max 100)
+                Fetch Available Matches (Next 30 Days)
               </Button>
             </div>
           )}
@@ -107,8 +108,8 @@ export const FetchGamesFetchModal = ({ isOpen, onClose, onExecute }: FetchGamesF
           {step === 'fetching' && (
             <div className="flex flex-col items-center justify-center py-8 gap-4">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              <p>Fetching today's games from API Football...</p>
-              <p className="text-xs text-muted-foreground">Fetching up to 100 matches with market odds</p>
+              <p>Fetching available upcoming games from API Football...</p>
+              <p className="text-xs text-muted-foreground">Loading every available API response page and market odds</p>
             </div>
           )}
 
@@ -119,7 +120,7 @@ export const FetchGamesFetchModal = ({ isOpen, onClose, onExecute }: FetchGamesF
                   ✅ Fetched {games.length} games
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {games.length === 100 ? '(Maximum limit reached)' : `(${games.length} of max 100)`}
+                  ({games.length} available upcoming matches)
                 </p>
                 <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">
                   Click Execute below to add these {games.length} games to the site.
