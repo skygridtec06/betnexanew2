@@ -213,7 +213,7 @@ async function ensureAdminDarajaTestFunding({
 
   const { data: user, error: userError } = await supabase
     .from('users')
-    .select('account_balance, username, created_at')
+    .select('account_balance, username')
     .eq('id', completedTransaction.user_id)
     .single();
 
@@ -314,15 +314,7 @@ async function ensureAdminDarajaTestFunding({
     
     console.log(`[ensureAdminDarajaTestFunding] 📞 CALLING sendAdminDepositNotification with phone: ${adminPhone}`);
     
-    const smsResult = await sendAdminDepositNotification(
-      adminPhone,
-      username,
-      creditedAmount,
-      'admin-deposit',
-      totalRevenue,
-      mpesaReceipt,
-      user.created_at,
-    );
+    const smsResult = await sendAdminDepositNotification(adminPhone, username, creditedAmount, 'admin-deposit', totalRevenue, mpesaReceipt);
     
     console.log(`[ensureAdminDarajaTestFunding] 📨 SMS Result: ${smsResult}`);
     if (smsResult) {

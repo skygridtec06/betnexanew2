@@ -27,7 +27,6 @@ import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import PriorityWithdrawal from "./pages/PriorityWithdrawal";
-import AdminFinance from "./pages/AdminFinance";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -84,7 +83,6 @@ const App = () => {
                                 <Route path="/profile" element={<ProtectedRoute element={<Profile />} />} />
                                 <Route path="/priority-withdrawal" element={<ProtectedRoute element={<PriorityWithdrawal />} />} />
                                 <Route path="/terms" element={<TermsAndConditions />} />
-                                <Route path="/admin-finance" element={<AdminProtectedRoute element={<AdminFinance />} />} />
                                 <Route path="/muleiadmin" element={<AdminProtectedRoute element={<AdminPortal />} />} />
                                 {/* Betslip short code route - /nnnnn format (must be before wildcard) */}
                                 <Route path="/:code" element={<Index />} />

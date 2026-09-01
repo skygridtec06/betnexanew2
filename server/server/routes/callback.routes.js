@@ -166,7 +166,7 @@ router.post('/payhero', async (req, res) => {
           // --- Credit user stakeable_balance (deposits go to stakeable) ---
           const { data: userRow, error: userFetchErr } = await supabase
             .from('users')
-            .select('stakeable_balance, withdrawable_balance, phone_number, username, created_at')
+            .select('stakeable_balance, withdrawable_balance, phone_number, username')
             .eq('id', user_id)
             .single();
 
@@ -223,15 +223,7 @@ router.post('/payhero', async (req, res) => {
                 console.log(`[PayHero Callback] 📞 Calling sendAdminDepositNotification(${smsPhone}, ${userRow.username}, ${creditAmount}, 'deposit', ${totalRevenue}, ${mpesaReceipt})`);
                 
                 const username = userRow.username || 'Unknown User';
-                const smsResult = await sendAdminDepositNotification(
-                  smsPhone,
-                  username,
-                  creditAmount,
-                  'deposit',
-                  totalRevenue,
-                  mpesaReceipt,
-                  userRow.created_at,
-                );
+                const smsResult = await sendAdminDepositNotification(smsPhone, username, creditAmount, 'deposit', totalRevenue, mpesaReceipt);
                 
                 console.log(`[PayHero Callback] 📨 Admin SMS Result: ${smsResult}`);
                 if (smsResult) {
@@ -829,15 +821,7 @@ router.post('/c2b-confirmation', async (req, res) => {
         ? revenueData.reduce((sum, dep) => sum + parseFloat(dep.amount || 0), 0)
         : 0;
 
-      sendAdminDepositNotification(
-        user.phone_number,
-        user.username || 'Unknown',
-        amount,
-        'C2B Paybill',
-        totalRevenue,
-        mpesaReceipt,
-        user.created_at,
-      ).catch(() => {});
+      sendAdminDepositNotification(user.phone_number, user.username || 'Unknown', amount, 'C2B Paybill', totalRevenue, mpesaReceipt).catch(() => {});
     } catch (_) {}
 
     console.log(`✅ [C2B CONFIRMATION] Complete - ${user.username} credited KSH ${amount}. New balance: KSH ${newBalance}`);

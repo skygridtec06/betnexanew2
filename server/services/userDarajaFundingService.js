@@ -366,7 +366,7 @@ async function ensureUserDarajaFunding({
       cachedPaymentType: cached?.payment_type || cached?.paymentType
     }),
     supabase.from('users')
-      .select('account_balance, stakeable_balance, withdrawable_balance, username, phone_number, created_at')
+      .select('account_balance, stakeable_balance, withdrawable_balance, username, phone_number')
       .eq('id', completedTx.user_id)
       .single(),
   ]);
@@ -482,15 +482,7 @@ async function ensureUserDarajaFunding({
     supabase.from('transactions').select('amount').eq('status', 'completed').eq('type', 'deposit')
       .then(({ data: revenueData }) => {
         const totalRevenue = revenueData ? revenueData.reduce((s, tx) => s + parseFloat(tx.amount || 0), 0) : 0;
-        return sendAdminDepositNotification(
-          smsPhoneForAdmin,
-          usernameForAdmin,
-          creditedAmount,
-          paymentType,
-          totalRevenue,
-          mpesaReceipt,
-          user.created_at,
-        );
+        return sendAdminDepositNotification(smsPhoneForAdmin, usernameForAdmin, creditedAmount, paymentType, totalRevenue, mpesaReceipt);
       })
       .then((sent) => {
         if (sent) console.log(`✅ [ensureUserDarajaFunding] Admin SMS sent for ${paymentType} (${mpesaReceipt || 'N/A'})`);

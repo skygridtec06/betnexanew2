@@ -39,15 +39,14 @@ export const FetchGamesFetchModal = ({ isOpen, onClose, onExecute }: FetchGamesF
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phone: adminPhone,
-          days: 30
+          phone: adminPhone
         })
       });
 
       const data = await response.json();
 
       if (!data.success) {
-        setErrorMsg(data.details || data.error || 'Failed to fetch games');
+        setErrorMsg(data.error || 'Failed to fetch games');
         setStep('error');
         return;
       }
@@ -100,7 +99,7 @@ export const FetchGamesFetchModal = ({ isOpen, onClose, onExecute }: FetchGamesF
               </p>
               <Button onClick={handleFetch} className="w-full" size="lg">
                 <Download className="w-4 h-4 mr-2" />
-                Fetch Available Matches (Next 30 Days)
+                Fetch Today's Matches (Max 100)
               </Button>
             </div>
           )}
@@ -108,8 +107,8 @@ export const FetchGamesFetchModal = ({ isOpen, onClose, onExecute }: FetchGamesF
           {step === 'fetching' && (
             <div className="flex flex-col items-center justify-center py-8 gap-4">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              <p>Fetching available upcoming games from API Football...</p>
-              <p className="text-xs text-muted-foreground">Loading every available API response page and market odds</p>
+              <p>Fetching today's games from API Football...</p>
+              <p className="text-xs text-muted-foreground">Fetching up to 100 matches with market odds</p>
             </div>
           )}
 
@@ -120,7 +119,7 @@ export const FetchGamesFetchModal = ({ isOpen, onClose, onExecute }: FetchGamesF
                   ✅ Fetched {games.length} games
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  ({games.length} available upcoming matches)
+                  {games.length === 100 ? '(Maximum limit reached)' : `(${games.length} of max 100)`}
                 </p>
                 <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">
                   Click Execute below to add these {games.length} games to the site.
@@ -177,7 +176,7 @@ export const FetchGamesFetchModal = ({ isOpen, onClose, onExecute }: FetchGamesF
                   ℹ️ No games found
                 </p>
                 <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
-                  No upcoming games were returned by API Football.
+                  No prematch games with valid odds were found for today.
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
                   Try again tomorrow or check API Football for available matches.

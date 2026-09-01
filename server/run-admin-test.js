@@ -11,7 +11,7 @@ const supabase = require('./services/database.js');
     const admin = data[0];
     console.log('ADMIN_FOUND', JSON.stringify(admin));
 
-    const base = 'https://www.betnexabackend.co.ke';
+    const base = 'https://betnexanewbackend.vercel.app';
     const tests = [
       { amount: 1, paymentType: 'deposit' },
       { amount: 9999, paymentType: 'activation' },

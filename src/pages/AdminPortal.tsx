@@ -3,7 +3,7 @@ import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Trash2, CheckCircle, XCircle, Clock, DollarSign, Users, UserPlus, BarChart3, Trophy, Settings, RefreshCw, Edit2, Save, ArrowDown, ArrowUp, Play, Pause, Square, Lock, Unlock, Shield, Zap, Upload, Image as ImageIcon, Loader2, Megaphone, Download, Ban, Flame, ArrowRightLeft, Wallet, FileText, Sparkles } from "lucide-react";
+import { Plus, Trash2, CheckCircle, XCircle, Clock, DollarSign, Users, UserPlus, BarChart3, Trophy, Settings, RefreshCw, Edit2, Save, ArrowDown, ArrowUp, Play, Pause, Square, Lock, Unlock, Shield, Zap, Upload, Image as ImageIcon, Loader2, Megaphone, Calendar, Download, Ban, Flame } from "lucide-react";
 import { type MatchMarkets } from "@/components/MatchCard";
 import { useMatches } from "@/context/MatchContext";
 import { useBets, type PlacedBet } from "@/context/BetContext";
@@ -17,10 +17,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { calculateMatchMinute } from "@/lib/gameTimeCalculator";
 import balanceSyncService from "@/lib/balanceSyncService";
 import { formatDateInEAT, formatTransactionDateInEAT, formatTimeInEAT } from "@/lib/timezoneFormatter";
+import { MatchEventEditor } from "@/components/MatchEventEditor";
 import { ActiveMembers } from "@/components/ActiveMembers";
 import { FetchGamesFetchModal } from "@/components/FetchGamesFetchModal";
 import { EarningsCalculator } from "@/components/EarningsCalculator";
-import { jsPDF } from "jspdf";
 
 const marketLabels: Record<string, string> = {
   bttsYes: "BTTS Yes", bttsNo: "BTTS No",
@@ -170,7 +170,6 @@ const AdminPortal = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phone: loggedInUser?.phone || manualTransactionForm.phoneNumber || manualTransactionUser.phone,
           userId: manualTransactionUser.id,
           type: manualTransactionForm.type,
           amount,
@@ -243,6 +242,11 @@ const AdminPortal = () => {
         return normalized.replace(/_/g, " ").toUpperCase();
     }
   };
+  const [selectedGameForEvents, setSelectedGameForEvents] = useState<{
+    id: string;
+    name: string;
+    kickoffTime: string;
+  } | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editingUserData, setEditingUserData] = useState<Record<string, any>>({});
   const [showUserTransactionsDialog, setShowUserTransactionsDialog] = useState(false);
@@ -426,30 +430,9 @@ const AdminPortal = () => {
     includeAdmins: false,
   });
 
-  // Bet marking, moving, and deletion state
+  // Bet marking and deletion state
   const [markedBets, setMarkedBets] = useState<Set<string>>(new Set());
-  const MOVED_BETS_STORAGE_KEY = 'betnexa_admin_moved_bets';
-  const [movedBetIds, setMovedBetIds] = useState<Set<string>>(() => {
-    if (typeof window === 'undefined') return new Set();
-
-    try {
-      const saved = window.localStorage.getItem(MOVED_BETS_STORAGE_KEY);
-      if (!saved) return new Set();
-
-      const parsed = JSON.parse(saved);
-      return new Set(Array.isArray(parsed) ? parsed : []);
-    } catch (error) {
-      console.warn('Failed to load moved bets from local storage:', error);
-      return new Set();
-    }
-  });
   const [deletingMarkedBets, setDeletingMarkedBets] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(MOVED_BETS_STORAGE_KEY, JSON.stringify(Array.from(movedBetIds)));
-    }
-  }, [movedBetIds]);
 
   // Game marking and deletion state
   const [markedGames, setMarkedGames] = useState<Set<string>>(new Set());
@@ -641,31 +624,6 @@ const AdminPortal = () => {
     });
   };
 
-  const moveMarkedBets = () => {
-    if (markedBets.size === 0) {
-      alert('No bets selected to move.');
-      return;
-    }
-
-    const selectedIds = Array.from(markedBets);
-    setMovedBetIds(prev => {
-      const next = new Set(prev);
-      selectedIds.forEach(id => next.add(id));
-      return next;
-    });
-    setMarkedBets(new Set());
-    alert(`✅ Moved ${selectedIds.length} bet(s) to the moved bets list.`);
-  };
-
-  const undoMovedBet = (betId: string) => {
-    setMovedBetIds(prev => {
-      const next = new Set(prev);
-      next.delete(betId);
-      return next;
-    });
-    alert('✅ Bet restored to active list.');
-  };
-
   const deleteMarkedBets = async () => {
     if (markedBets.size === 0) {
       alert('No bets selected for deletion.');
@@ -727,22 +685,7 @@ const AdminPortal = () => {
       return;
     }
 
-    const selectedGameList = Array.from(markedGames)
-      .map((gameId) => games.find((g) => g.id === gameId))
-      .filter(Boolean);
-    const includesManualAdminGames = selectedGameList.some((game) => {
-      const gameId = String(game?.game_id || game?.id || '');
-      return !gameId.startsWith('af-') && !gameId.startsWith('ab-');
-    });
-
-    if (includesManualAdminGames) {
-      const confirmed = window.confirm(
-        `⚠️ You have selected ${selectedGameList.filter((game) => !String(game?.game_id || game?.id || '').startsWith('af-') && !String(game?.game_id || game?.id || '').startsWith('ab-')).length} admin-added match(es). This will permanently remove them from the system. Continue?`
-      );
-      if (!confirmed) return;
-    }
-
-    if (!window.confirm(`⚠️ Are you sure you want to delete ${markedGames.size} marked game(s)? This action cannot be undone.`)) {
+    if (!window.confirm(`⚠️ Are you sure you want to delete ${markedGames.size} marked API game(s)? This action cannot be undone.`)) {
       return;
     }
 
@@ -952,14 +895,6 @@ const AdminPortal = () => {
       const data = await response.json();
 
       if (data.success) {
-        if (data.duplicate) {
-          console.warn('ℹ️ Duplicate game ignored:', data.message || 'Game already exists');
-          setShowAddGame(false);
-          refreshGames();
-          alert('This game already exists in the system and was not duplicated.');
-          return;
-        }
-
         // Add game to local context for immediate UI update
         const gameData: GameOdds = {
           id: data.game.game_id || data.game.id,
@@ -1034,12 +969,12 @@ const AdminPortal = () => {
           refreshGames();
         }, 500);
       } else {
-        console.warn('ℹ️ Non-fatal game add response:', data);
-        alert(`This game already exists or could not be created: ${data.error || 'No action taken.'}`);
+        console.error('API Error:', data);
+        alert(`Error: ${data.error || 'Failed to add game'}`);
       }
     } catch (error) {
       console.error('Error adding game:', error);
-      alert('Failed to add game. Please try again.');
+      alert('Failed to add game. Check console for details.');
     }
   };
 
@@ -1329,13 +1264,6 @@ const AdminPortal = () => {
       });
       const data = await response.json();
       if (data.success) {
-        if (data.duplicate) {
-          setParsedImportGames(prev => prev.map((g, i) => i === gameIdx ? { ...g, saving: false, saved: true, duplicate: true } : g));
-          console.warn('ℹ️ Import duplicate skipped:', data.message || 'Game already exists');
-          refreshGames();
-          return;
-        }
-
         setParsedImportGames(prev => prev.map((g, i) => i === gameIdx ? { ...g, saving: false, saved: true } : g));
         refreshGames();
       } else {
@@ -1343,8 +1271,7 @@ const AdminPortal = () => {
       }
     } catch (err: any) {
       setParsedImportGames(prev => prev.map((g, i) => i === gameIdx ? { ...g, saving: false } : g));
-      console.warn(`ℹ️ Import skipped for ${pg.homeTeam} vs ${pg.awayTeam}: ${err.message}`);
-      alert(`This fixture already exists or could not be added: ${pg.homeTeam} vs ${pg.awayTeam}`);
+      alert(`Failed to add ${pg.homeTeam} vs ${pg.awayTeam}: ${err.message}`);
     }
   };
 
@@ -2303,204 +2230,9 @@ const AdminPortal = () => {
   const stats: Array<{ icon: any; label: string; value: string; color: string; note?: string }> = [
     { icon: Users, label: "Total Users", value: totalUsers.toLocaleString(), color: "text-primary" },
     { icon: UserPlus, label: "Signed Up Today", value: todaySignups.toLocaleString(), color: "text-primary" },
+    { icon: BarChart3, label: "Active Bets", value: activeBets.toLocaleString(), color: "text-primary" },
     { icon: Trophy, label: "Games Today", value: games.length.toString(), color: "text-gold" },
   ];
-
-  const dailySignupGroups = (() => {
-    const grouped: Record<string, any[]> = {};
-
-    getAllUsers().forEach((user: any) => {
-      const rawDate = user.createdAt || user.joinDate || user.created_at;
-      if (!rawDate) return;
-
-      const date = new Date(rawDate);
-      if (Number.isNaN(date.getTime())) return;
-
-      const toLocalISOString = (d: Date) => {
-        const offset = d.getTimezoneOffset();
-        return new Date(d.getTime() - offset * 60000).toISOString().slice(0, 10);
-      };
-
-      const dayKey = toLocalISOString(date);
-      grouped[dayKey] = grouped[dayKey] || [];
-      grouped[dayKey].push(user);
-    });
-
-    return Object.entries(grouped)
-      .map(([date, usersForDay]) => ({
-        date,
-        users: usersForDay.sort((a: any, b: any) => {
-          const aTime = new Date(a.createdAt || a.joinDate || a.created_at || 0).getTime();
-          const bTime = new Date(b.createdAt || b.joinDate || b.created_at || 0).getTime();
-          return bTime - aTime;
-        }),
-      }))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  })();
-
-  const [selectedSignupDate, setSelectedSignupDate] = useState<string | null>(null);
-  const [showFinanceReportDialog, setShowFinanceReportDialog] = useState(false);
-  const [financeReportStart, setFinanceReportStart] = useState(() => {
-    const date = new Date();
-    date.setDate(date.getDate() - 6);
-    return date.toISOString().slice(0, 10);
-  });
-  const [financeReportEnd, setFinanceReportEnd] = useState(() => new Date().toISOString().slice(0, 10));
-
-  const normalizeFinanceDate = (value: string | null | undefined) => {
-    if (!value) return null;
-    const date = new Date(`${value}T00:00:00`);
-    return Number.isNaN(date.getTime()) ? null : date;
-  };
-
-  const getFinanceMetrics = () => {
-    const startDate = normalizeFinanceDate(financeReportStart);
-    const endDate = normalizeFinanceDate(financeReportEnd);
-
-    const filtered = allTransactions.filter((transaction: any) => {
-      const candidate = new Date(transaction.created_at || transaction.date || transaction.createdAt || transaction.updated_at || Date.now());
-      if (Number.isNaN(candidate.getTime())) return false;
-      if (startDate && candidate < startDate) return false;
-      if (endDate) {
-        const endOfDay = new Date(`${financeReportEnd}T23:59:59`);
-        if (candidate > endOfDay) return false;
-      }
-      return true;
-    });
-
-    const earnings = filtered
-      .filter((transaction: any) => {
-        const type = String(transaction.type || '').toLowerCase();
-        const status = String(transaction.status || '').toLowerCase();
-        const isCompleted = status === 'completed' || status === 'success';
-        return isCompleted && (type === 'deposit' || type === 'activation' || type === 'priority' || type === 'activation_fee');
-      })
-      .reduce((sum: number, transaction: any) => sum + Number(transaction.amount || 0), 0);
-
-    const spendings = filtered
-      .filter((transaction: any) => {
-        const type = String(transaction.type || '').toLowerCase();
-        const status = String(transaction.status || '').toLowerCase();
-        const isCompleted = status === 'completed' || status === 'success';
-        return isCompleted && (type === 'withdrawal' || type === 'withdraw' || type === 'payout');
-      })
-      .reduce((sum: number, transaction: any) => sum + Number(transaction.amount || 0), 0);
-
-    const datesInRange: string[] = [];
-    const cursor = new Date(`${financeReportStart}T00:00:00`);
-    const endCursor = new Date(`${financeReportEnd}T00:00:00`);
-    while (cursor <= endCursor) {
-      datesInRange.push(cursor.toISOString().slice(0, 10));
-      cursor.setDate(cursor.getDate() + 1);
-    }
-
-    const dailyBreakdown = datesInRange.map((date) => {
-      const entries = filtered.filter((transaction: any) => {
-        const txDate = new Date(transaction.created_at || transaction.date || transaction.createdAt || transaction.updated_at || Date.now());
-        return txDate.toISOString().slice(0, 10) === date;
-      });
-
-      const dailyEarnings = entries
-        .filter((transaction: any) => {
-          const type = String(transaction.type || '').toLowerCase();
-          const status = String(transaction.status || '').toLowerCase();
-          return (status === 'completed' || status === 'success') && (type === 'deposit' || type === 'activation' || type === 'priority' || type === 'activation_fee');
-        })
-        .reduce((sum: number, transaction: any) => sum + Number(transaction.amount || 0), 0);
-
-      const dailySpendings = entries
-        .filter((transaction: any) => {
-          const type = String(transaction.type || '').toLowerCase();
-          const status = String(transaction.status || '').toLowerCase();
-          return (status === 'completed' || status === 'success') && (type === 'withdrawal' || type === 'withdraw' || type === 'payout');
-        })
-        .reduce((sum: number, transaction: any) => sum + Number(transaction.amount || 0), 0);
-
-      return {
-        date,
-        earnings: dailyEarnings,
-        spendings: dailySpendings,
-        net: dailyEarnings - dailySpendings,
-      };
-    });
-
-    const periodDays = Math.max(1, datesInRange.length);
-    return {
-      earnings,
-      spendings,
-      net: earnings - spendings,
-      averageDailyEarnings: earnings / periodDays,
-      averageDailySpendings: spendings / periodDays,
-      dailyBreakdown,
-    };
-  };
-
-  const generateFinanceReportPdf = () => {
-    const metrics = getFinanceMetrics();
-    const doc = new jsPDF();
-
-    const periodLabel = `${new Date(`${financeReportStart}T00:00:00`).toLocaleDateString()} - ${new Date(`${financeReportEnd}T00:00:00`).toLocaleDateString()}`;
-    const netSummary = metrics.net >= 0 ? 'Healthy positive cash flow' : 'Spending exceeds earnings';
-    const recommendations = metrics.net >= 0
-      ? [
-          'Do: continue scaling deposit campaigns and keep the current payout controls in place.',
-          'Do: push high-conversion offers during peak volume days to convert more deposits.',
-          'Avoid: large manual bonus payouts without validating the real cash-flow margin.',
-        ]
-      : [
-          'Do: review oversized withdrawals and tighten payout approvals for the next cycle.',
-          'Do: focus on deposit growth campaigns to rebuild positive flow before more payouts are approved.',
-          'Avoid: approving withdrawals that exceed the current net position without a cash reserve check.',
-        ];
-
-    doc.setFillColor(29, 38, 56);
-    doc.rect(0, 0, 210, 26, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(18);
-    doc.text('Betnexa Finance Report', 14, 16);
-
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(11);
-    doc.text(`Period: ${periodLabel}`, 14, 38);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 45);
-    doc.text(`Status: ${netSummary}`, 14, 52);
-
-    doc.setFontSize(12);
-    doc.text('Executive Summary', 14, 68);
-    doc.setFontSize(10);
-    const summaryLines = [
-      `Total earnings: KSH ${metrics.earnings.toLocaleString()}`,
-      `Total spendings: KSH ${metrics.spendings.toLocaleString()}`,
-      `Net result: KSH ${metrics.net.toLocaleString()}`,
-      `Average daily earnings: KSH ${metrics.averageDailyEarnings.toLocaleString()}`,
-      `Average daily spendings: KSH ${metrics.averageDailySpendings.toLocaleString()}`,
-    ];
-
-    summaryLines.forEach((line, index) => {
-      doc.text(line, 14, 80 + index * 8);
-    });
-
-    const dailyStartY = 130;
-    doc.setFontSize(12);
-    doc.text('Daily Breakdown', 14, dailyStartY);
-    doc.setFontSize(9);
-    metrics.dailyBreakdown.slice(0, 7).forEach((day, index) => {
-      const y = dailyStartY + 10 + index * 10;
-      doc.text(`${day.date}: Earned KSH ${day.earnings.toLocaleString()} | Spent KSH ${day.spendings.toLocaleString()} | Net KSH ${day.net.toLocaleString()}`, 14, y);
-    });
-
-    const recStartY = dailyStartY + 70;
-    doc.setFontSize(12);
-    doc.text('AI Recommendations', 14, recStartY);
-    doc.setFontSize(9);
-    recommendations.forEach((item, index) => {
-      const wrapped = doc.splitTextToSize(`${index + 1}. ${item}`, 175);
-      doc.text(wrapped, 14, recStartY + 12 + index * 20);
-    });
-
-    doc.save(`betnexa-finance-report-${financeReportStart}-to-${financeReportEnd}.pdf`);
-    setShowFinanceReportDialog(false);
-  };
 
   const stopDarajaTestPolling = () => {
     if (darajaTestIntervalRef.current) {
@@ -2743,93 +2475,27 @@ const AdminPortal = () => {
               </div>
             </div>
           ))}
-
-          <button
-            type="button"
-            onClick={() => {
-              window.open('/admin-finance', '_blank', 'noopener,noreferrer');
-            }}
-            className="gradient-card rounded-xl border border-border/50 p-5 text-left card-glow transition-transform duration-200 hover:-translate-y-0.5 hover:border-primary/50 md:col-span-1"
-          >
-            <div className="flex items-center justify-between">
-              <div className="w-full">
-                <p className="text-xs text-muted-foreground">Finance</p>
-              </div>
-              <Wallet className="h-8 w-8 text-primary opacity-30" />
-            </div>
-          </button>
         </div>
 
-        <Dialog open={showFinanceReportDialog} onOpenChange={setShowFinanceReportDialog}>
-          <DialogContent className="max-w-xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-foreground">
-                <Sparkles className="h-4 w-4 text-primary" /> Financial Report
-              </DialogTitle>
-              <DialogDescription>
-                Generate a PDF report for a specific period with AI-guided recommendations.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Start date</label>
-                  <Input type="date" value={financeReportStart} onChange={(e) => setFinanceReportStart(e.target.value)} />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">End date</label>
-                  <Input type="date" value={financeReportEnd} onChange={(e) => setFinanceReportEnd(e.target.value)} />
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border/50 bg-secondary/20 p-4">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Earnings</p>
-                    <p className="mt-1 font-semibold text-green-500">KSH {getFinanceMetrics().earnings.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Spendings</p>
-                    <p className="mt-1 font-semibold text-red-500">KSH {getFinanceMetrics().spendings.toLocaleString()}</p>
-                  </div>
-                </div>
-                <div className="mt-4 rounded-lg border border-border/50 bg-background/70 p-3">
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground">AI Summary</p>
-                  <p className="mt-2 text-sm text-foreground">
-                    {getFinanceMetrics().net >= 0
-                      ? 'The business is making a healthy net gain. Keep investing in deposit campaigns and maintain strict approval rules for large payouts.'
-                      : 'The cash flow is currently under pressure. Reduce discretionary payouts, tighten approval thresholds, and push more deposit-driving activity before approving more spend.'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowFinanceReportDialog(false)}>Close</Button>
-              <Button onClick={generateFinanceReportPdf} className="bg-primary text-primary-foreground">
-                <Download className="mr-2 h-4 w-4" /> Generate PDF
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
         <Tabs value={adminTab} onValueChange={handleTabChange}>
-          <TabsList className="mb-6 bg-secondary grid w-full grid-cols-6">
+          <TabsList className="mb-6 bg-secondary grid w-full grid-cols-7">
             <TabsTrigger value="games" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Trophy className="mr-1 h-4 w-4" /> Games
             </TabsTrigger>
+            <TabsTrigger value="events" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Calendar className="mr-1 h-4 w-4" /> Events
+            </TabsTrigger>
             <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Users className="mr-1 h-4 w-4" /> Users
+            </TabsTrigger>
+            <TabsTrigger value="broadcast" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Megaphone className="mr-1 h-4 w-4" /> Broadcast
             </TabsTrigger>
             <TabsTrigger value="earnings" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BarChart3 className="mr-1 h-4 w-4" /> Earnings
             </TabsTrigger>
             <TabsTrigger value="transactions" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <DollarSign className="mr-1 h-4 w-4" /> Transactions
-            </TabsTrigger>
-            <TabsTrigger value="signups" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <UserPlus className="mr-1 h-4 w-4" /> Signups
             </TabsTrigger>
             <TabsTrigger value="bets" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Trophy className="mr-1 h-4 w-4" /> Bets
@@ -3673,6 +3339,22 @@ const AdminPortal = () => {
                           Mark Live
                         </Button>
                       )}
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        onClick={() => {
+                          setSelectedGameForEvents({
+                            id: game.id,
+                            name: `${game.homeTeam} vs ${game.awayTeam}`,
+                            kickoffTime: game.time,
+                          });
+                          setAdminTab("events");
+                        }}
+                        title="Configure automated match events"
+                        className="border-primary/50 hover:bg-primary/10"
+                      >
+                        <Zap className="h-4 w-4 text-primary" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => toggleHot(game.id)} title={game.isHot ? "Unmark as Hot" : "Mark as Hot"}>
                         <Flame className={`h-4 w-4 ${game.isHot ? 'text-orange-500 fill-orange-500' : 'text-muted-foreground'}`} />
                       </Button>
@@ -3809,7 +3491,7 @@ const AdminPortal = () => {
               <h4 className="font-display text-sm font-bold uppercase tracking-wider text-orange-500 flex items-center gap-2">
                 <Trash2 className="h-4 w-4" /> Delete All Games by Date
               </h4>
-              <p className="text-xs text-muted-foreground">Warning: this includes admin-added matches. Use only when you intentionally want to remove every game on that date.</p>
+              <p className="text-xs text-muted-foreground">Select and delete ALL games (API and admin-added) matching a specific kickoff date.</p>
               
               <div className="flex gap-2">
                 <Input
@@ -3916,6 +3598,93 @@ const AdminPortal = () => {
                 );
               })()}
             </div>
+          </TabsContent>
+
+          <TabsContent value="events" className="space-y-6">
+            {selectedGameForEvents ? (
+              <div className="space-y-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedGameForEvents(null)}
+                  className="mb-4"
+                >
+                  ← Back to Games
+                </Button>
+                <MatchEventEditor
+                  gameId={selectedGameForEvents.id}
+                  gameName={selectedGameForEvents.name}
+                  kickoffTime={selectedGameForEvents.kickoffTime}
+                  onClose={() => setSelectedGameForEvents(null)}
+                  adminPhone={loggedInUser?.phone || ""}
+                />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <h3 className="font-display text-sm font-bold uppercase tracking-wider text-foreground">
+                  Match Event Scheduler
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Select a game to configure automated match events for the fixture.
+                </p>
+
+                {games && games.length > 0 ? (
+                  <div className="grid gap-3">
+                    {games
+                      .filter((game) => {
+                        const id = game.id || game.game_id || '';
+                        return (
+                          !id.startsWith('af-') &&
+                          !id.startsWith('ab-') &&
+                          (game.status === 'upcoming' || game.status === 'live')
+                        );
+                      })
+                      .map((game) => {
+                        const homeTeam = game.homeTeam || game.home_team || 'Home';
+                        const awayTeam = game.awayTeam || game.away_team || 'Away';
+                        return (
+                          <Card
+                            key={game.id}
+                            className="border-primary/20 bg-card/50 p-4 hover:border-primary/50 transition cursor-pointer"
+                            onClick={() =>
+                              setSelectedGameForEvents({
+                                id: game.id,
+                                name: `${homeTeam} vs ${awayTeam}`,
+                                kickoffTime: game.time,
+                              })
+                            }
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-semibold">
+                                  {homeTeam} vs {awayTeam}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {formatTimeInEAT(game.time)}
+                                </p>
+                              </div>
+                              <Badge variant="outline">
+                                {game.status === "live" && (
+                                  <span className="text-green-400">LIVE</span>
+                                )}
+                                {game.status === "upcoming" && (
+                                  <span className="text-blue-400">UPCOMING</span>
+                                )}
+                                {game.status === "finished" && (
+                                  <span className="text-gray-400">FINISHED</span>
+                                )}
+                              </Badge>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-border/50 bg-card p-8 text-center text-muted-foreground">
+                    No games available. Create a game first in the Games tab.
+                  </div>
+                )}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="users" className="space-y-6">
@@ -4347,6 +4116,127 @@ const AdminPortal = () => {
             </DialogContent>
           </Dialog>
 
+          <TabsContent value="broadcast" className="space-y-6">
+            <div className="mb-4">
+              <h3 className="font-display text-sm font-bold uppercase tracking-wider text-foreground">SMS Broadcast</h3>
+              <p className="mt-1 text-xs text-muted-foreground">Send one message to all users or to a filtered audience.</p>
+            </div>
+
+            <Card className="border-border bg-card p-4 space-y-4">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Search (name, username, phone)</label>
+                  <Input
+                    className="mt-1"
+                    value={broadcastFilters.searchTerm}
+                    onChange={(e) => setBroadcastFilters((prev) => ({ ...prev, searchTerm: e.target.value }))}
+                    placeholder="e.g. denis or 2547..."
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Activation Status</label>
+                  <select
+                    className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    value={broadcastFilters.activationStatus}
+                    onChange={(e) => setBroadcastFilters((prev) => ({ ...prev, activationStatus: e.target.value }))}
+                  >
+                    <option value="all">All</option>
+                    <option value="activated">Activated Only</option>
+                    <option value="not_activated">Not Activated Only</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Betting Activity</label>
+                  <select
+                    className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    value={broadcastFilters.bettingStatus}
+                    onChange={(e) => setBroadcastFilters((prev) => ({ ...prev, bettingStatus: e.target.value }))}
+                  >
+                    <option value="all">All</option>
+                    <option value="with_bets">Users With Bets</option>
+                    <option value="no_bets">Users Without Bets</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Minimum Account Balance (KSH)</label>
+                  <Input
+                    className="mt-1"
+                    type="number"
+                    min="0"
+                    value={broadcastFilters.minBalance}
+                    onChange={(e) => setBroadcastFilters((prev) => ({ ...prev, minBalance: e.target.value }))}
+                    placeholder="Leave empty for any"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Minimum Total Winnings (KSH)</label>
+                  <Input
+                    className="mt-1"
+                    type="number"
+                    min="0"
+                    value={broadcastFilters.minTotalWinnings}
+                    onChange={(e) => setBroadcastFilters((prev) => ({ ...prev, minTotalWinnings: e.target.value }))}
+                    placeholder="Leave empty for any"
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <label className="inline-flex items-center gap-2 text-sm text-foreground">
+                    <input
+                      type="checkbox"
+                      checked={broadcastFilters.includeAdmins}
+                      onChange={(e) => setBroadcastFilters((prev) => ({ ...prev, includeAdmins: e.target.checked }))}
+                    />
+                    Include admin accounts
+                  </label>
+                </div>
+              </div>
+
+              <div className="rounded-md border border-border bg-secondary/40 p-3 text-sm">
+                <p className="font-medium text-foreground">Recipients Preview: {previewBroadcastRecipients.length}</p>
+                <p className="text-xs text-muted-foreground mt-1">The message will be sent only to users matching the current filters.</p>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Broadcast Message</label>
+                <textarea
+                  className="mt-1 min-h-[140px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  maxLength={480}
+                  value={broadcastMessage}
+                  onChange={(e) => setBroadcastMessage(e.target.value)}
+                  placeholder="Type the SMS to send..."
+                />
+                <p className="mt-1 text-xs text-muted-foreground">{broadcastMessage.length}/480 characters</p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Button variant="hero" disabled={sendingBroadcast || previewBroadcastRecipients.length === 0} onClick={handleSendBroadcast}>
+                  {sendingBroadcast ? (
+                    <><Clock className="mr-2 h-4 w-4 animate-spin" /> Sending...</>
+                  ) : (
+                    <><Megaphone className="mr-2 h-4 w-4" /> Send Broadcast SMS</>
+                  )}
+                </Button>
+                {previewBroadcastRecipients.length === 0 && (
+                  <span className="text-xs text-red-500">No recipients match current filters</span>
+                )}
+              </div>
+
+              {broadcastResult && (
+                <div className="rounded-md border border-border bg-background p-3 text-sm">
+                  <p className="font-medium text-foreground">{broadcastResult.message || 'Broadcast finished'}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Matched: {broadcastResult.matchedRecipients || 0} | Sent: {broadcastResult.sent || 0} | Failed: {broadcastResult.failed || 0}
+                  </p>
+                </div>
+              )}
+            </Card>
+          </TabsContent>
+
           <TabsContent value="earnings" className="space-y-6">
             <EarningsCalculator />
           </TabsContent>
@@ -4561,128 +4451,11 @@ const AdminPortal = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="signups" className="space-y-6">
-            <div className="mb-4">
-              <h3 className="font-display text-sm font-bold uppercase tracking-wider text-foreground">Daily Signups</h3>
-              <p className="mt-1 text-xs text-muted-foreground">Review how many users signed up each day and open the accounts for that date.</p>
-            </div>
-
-            {dailySignupGroups.length === 0 ? (
-              <div className="rounded-xl border border-border/50 bg-card p-8 text-center text-muted-foreground">
-                No signups recorded yet.
-              </div>
-            ) : (
-              <div className="space-y-5">
-                <Card className="border-border bg-card p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Signup rate</h4>
-                    <span className="text-xs text-primary font-medium">
-                      Peak: {Math.max(...dailySignupGroups.map((group) => group.users.length))} users
-                    </span>
-                  </div>
-
-                  <div className="flex h-40 items-end gap-3 rounded-lg border border-border/50 bg-secondary/30 p-3">
-                    {dailySignupGroups.slice(0, 7).map((group) => {
-                      const barHeight = Math.max((group.users.length / Math.max(...dailySignupGroups.map((item) => item.users.length), 1)) * 100, 8);
-                      const isSelected = selectedSignupDate === group.date;
-
-                      return (
-                        <div key={group.date} className="flex flex-1 flex-col items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedSignupDate(isSelected ? null : group.date)}
-                            className="flex h-full w-full flex-col items-center justify-end gap-2 rounded-md"
-                            title={`${group.users.length} signups on ${new Date(`${group.date}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`}
-                          >
-                            <div
-                              className={`w-full rounded-t-md transition-all duration-200 ${isSelected ? 'bg-primary shadow-lg shadow-primary/30' : 'bg-primary/70 hover:bg-primary'}`}
-                              style={{ height: `${barHeight}%` }}
-                            />
-                          </button>
-                          <span className="text-[10px] text-muted-foreground">
-                            {new Date(`${group.date}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </Card>
-
-                {dailySignupGroups.map((group) => (
-                  <Card key={group.date} className="border-border bg-card p-4">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                      <div>
-                        <p className="text-xs uppercase tracking-wider text-muted-foreground">Signup date</p>
-                        <h4 className="mt-1 text-base font-semibold text-foreground">
-                          {new Date(`${group.date}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                        </h4>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <Badge className="bg-primary/10 text-primary hover:bg-primary/15">
-                          {group.users.length} signup{group.users.length === 1 ? '' : 's'}
-                        </Badge>
-                        <Button
-                          size="sm"
-                          variant={selectedSignupDate === group.date ? 'secondary' : 'hero'}
-                          onClick={() => setSelectedSignupDate(selectedSignupDate === group.date ? null : group.date)}
-                        >
-                          {selectedSignupDate === group.date ? 'Hide' : 'View'}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {selectedSignupDate === group.date && (
-                      <div className="mt-4 space-y-2 rounded-lg border border-border/50 bg-secondary/30 p-3">
-                        {group.users.map((user: any) => (
-                          <div key={user.id || `${user.phone}-${user.email}`} className="flex flex-col gap-1 rounded-md border border-border/50 bg-background/60 p-3 md:flex-row md:items-center md:justify-between">
-                            <div>
-                              <p className="font-medium text-foreground">{user.name || 'Unnamed User'}</p>
-                              <div className="mt-1 text-xs text-muted-foreground">
-                                {user.phone && <span>{user.phone}</span>}
-                                {user.email && <span className="ml-2">{user.email}</span>}
-                              </div>
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {user.username ? `@${user.username}` : 'No username'}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
           <TabsContent value="bets" className="space-y-6">
             <div className="mb-4">
               <h3 className="font-display text-sm font-bold uppercase tracking-wider text-foreground">Manage Bets</h3>
               <p className="mt-1 text-xs text-muted-foreground">All open, won, and lost bets - Mark selections individually for multibets</p>
             </div>
-
-            {markedBets.size > 0 && (
-              <div className="mb-4 flex justify-end gap-3 rounded-xl border border-violet-500/40 bg-violet-500/10 p-3 shadow-lg shadow-violet-500/10">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={moveMarkedBets}
-                  className="text-xs bg-violet-600 text-white hover:bg-violet-700 shadow-md"
-                >
-                  <ArrowRightLeft className="mr-1 h-3 w-3" /> Move {markedBets.size} Marked
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={deleteMarkedBets}
-                  disabled={deletingMarkedBets}
-                  className="text-xs shadow-md"
-                >
-                  <Trash2 className="mr-1 h-3 w-3" /> Delete {markedBets.size} Marked
-                </Button>
-              </div>
-            )}
             
             {bets.length === 0 ? (
               <div className="rounded-xl border border-border/50 bg-card p-8 text-center text-muted-foreground">
@@ -4692,18 +4465,16 @@ const AdminPortal = () => {
               <div className="space-y-8">
                 {/* Separate and sort bets */}
                 {(() => {
-                  // Separate and sort bets while excluding admin-moved bets from active counts.
-                  const activeBets = bets.filter(b => !movedBetIds.has(b.id));
-                  const openBets = activeBets.filter(b => b.status === "Open").sort((a, b) => {
+                  // Separate and sort bets
+                  const openBets = bets.filter(b => b.status === "Open").sort((a, b) => {
                     const dateA = new Date(a.date).getTime();
                     const dateB = new Date(b.date).getTime();
                     return dateB - dateA; // Latest first
                   });
                   
-                  const settledBets = activeBets.filter(b => b.status !== "Open");
+                  const settledBets = bets.filter(b => b.status !== "Open");
                   const wonBets = settledBets.filter(b => b.status === "Won");
                   const lostBets = settledBets.filter(b => b.status === "Lost");
-                  const movedBets = bets.filter(b => movedBetIds.has(b.id));
                   
                   // Render Open Bets Section
                   return (
@@ -4713,28 +4484,18 @@ const AdminPortal = () => {
                         <div className="space-y-3 pb-8 border-b-2 border-yellow-500/30">
                           <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm py-2 flex items-center justify-between">
                             <h4 className="text-xs font-bold uppercase tracking-wider text-yellow-500 flex items-center gap-2">
-                              <Clock className="h-4 w-4" /> OPEN BETS
+                              <Clock className="h-4 w-4" /> Open Bets ({openBets.length})
                             </h4>
                             {markedBets.size > 0 && (
-                              <div className="flex gap-2 justify-end">
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={moveMarkedBets}
-                                  className="text-xs bg-violet-600 text-white hover:bg-violet-700 shadow-md"
-                                >
-                                  <ArrowRightLeft className="mr-1 h-3 w-3" /> Move {markedBets.size} Marked
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={deleteMarkedBets}
-                                  disabled={deletingMarkedBets}
-                                  className="text-xs shadow-md"
-                                >
-                                  <Trash2 className="mr-1 h-3 w-3" /> Delete {markedBets.size} Marked
-                                </Button>
-                              </div>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={deleteMarkedBets}
+                                disabled={deletingMarkedBets}
+                                className="text-xs"
+                              >
+                                <Trash2 className="mr-1 h-3 w-3" /> Delete {markedBets.size} Marked
+                              </Button>
                             )}
                           </div>
                           
@@ -4836,25 +4597,15 @@ const AdminPortal = () => {
                               <CheckCircle className="h-4 w-4" /> Won Bets ({wonBets.length})
                             </h4>
                             {markedBets.size > 0 && (
-                              <div className="flex gap-2 justify-end">
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={moveMarkedBets}
-                                  className="text-xs bg-violet-600 text-white hover:bg-violet-700 shadow-md"
-                                >
-                                  <ArrowRightLeft className="mr-1 h-3 w-3" /> Move {markedBets.size} Marked
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={deleteMarkedBets}
-                                  disabled={deletingMarkedBets}
-                                  className="text-xs shadow-md"
-                                >
-                                  <Trash2 className="mr-1 h-3 w-3" /> Delete {markedBets.size} Marked
-                                </Button>
-                              </div>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={deleteMarkedBets}
+                                disabled={deletingMarkedBets}
+                                className="text-xs"
+                              >
+                                <Trash2 className="mr-1 h-3 w-3" /> Delete {markedBets.size} Marked
+                              </Button>
                             )}
                           </div>
                           
@@ -4948,69 +4699,6 @@ const AdminPortal = () => {
                         </div>
                       )}
                       
-                      {/* MOVED BETS - Below Won Bets / Admin-only archive */}
-                      {movedBets.length > 0 && (
-                        <div className="space-y-3 pt-8 pb-8 border-b-2 border-violet-500/30">
-                          <div className="bg-card/95 backdrop-blur-sm py-2 flex items-center justify-between">
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-violet-500 flex items-center gap-2">
-                              <ArrowRightLeft className="h-4 w-4" /> Moved Bets ({movedBets.length})
-                            </h4>
-                          </div>
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-xs">
-                              <thead className="bg-violet-500/10 border-b border-violet-500/30">
-                                <tr className="text-violet-500">
-                                  <th className="text-left p-2 font-semibold">Username</th>
-                                  <th className="text-left p-2 font-semibold">Phone</th>
-                                  <th className="text-center p-2 font-semibold">Status</th>
-                                  <th className="text-right p-2 font-semibold">Stake (KSH)</th>
-                                  <th className="text-right p-2 font-semibold">Win Amount (KSH)</th>
-                                  <th className="text-left p-2 font-semibold">Bet ID</th>
-                                  <th className="text-left p-2 font-semibold">Date & Time Placed</th>
-                                  <th className="text-center p-2 font-semibold">Odds</th>
-                                  <th className="text-center p-2 font-semibold">Selections</th>
-                                  <th className="text-center p-2 font-semibold">View</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-border">
-                                {movedBets.map((bet) => (
-                                  <tr key={bet.id} className="bg-violet-500/5 hover:bg-violet-500/10 transition-colors">
-                                    <td className="p-2 text-foreground font-medium">{bet.username || 'Unknown'}</td>
-                                    <td className="p-2 text-muted-foreground">{bet.phone_number || '-'}</td>
-                                    <td className="p-2 text-center">
-                                      <Badge className="bg-violet-500/15 text-violet-400 hover:bg-violet-500/15 text-[10px]">Moved</Badge>
-                                    </td>
-                                    <td className="p-2 text-right text-primary font-semibold">{bet.stake.toLocaleString()}</td>
-                                    <td className="p-2 text-right text-violet-500 font-bold">{bet.potentialWin.toLocaleString()}</td>
-                                    <td className="p-2 text-foreground font-mono">#{bet.betId}</td>
-                                    <td className="p-2 text-muted-foreground whitespace-nowrap">
-                                      {bet.date ? formatTransactionDateInEAT(bet.date) : 'Unknown'}
-                                    </td>
-                                    <td className="p-2 text-center">{bet.totalOdds.toFixed(2)}</td>
-                                    <td className="p-2 text-center">{bet.selections.length}</td>
-                                    <td className="p-2 text-center">
-                                      <div className="flex items-center justify-center gap-2">
-                                        <Button variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => openBetDetails(bet)}>
-                                          View
-                                        </Button>
-                                        <Button
-                                          variant="secondary"
-                                          size="sm"
-                                          className="h-7 text-[10px] bg-violet-600 text-white hover:bg-violet-700"
-                                          onClick={() => undoMovedBet(bet.id)}
-                                        >
-                                          Undo
-                                        </Button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
-                      
                       {/* LOST BETS - Below Won with Divider */}
                       {lostBets.length > 0 && (
                         <div className="space-y-3 pt-8">
@@ -5019,25 +4707,15 @@ const AdminPortal = () => {
                               <XCircle className="h-4 w-4" /> Lost Bets ({lostBets.length})
                             </h4>
                             {markedBets.size > 0 && (
-                              <div className="flex gap-2 justify-end">
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={moveMarkedBets}
-                                  className="text-xs bg-violet-600 text-white hover:bg-violet-700 shadow-md"
-                                >
-                                  <ArrowRightLeft className="mr-1 h-3 w-3" /> Move {markedBets.size} Marked
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={deleteMarkedBets}
-                                  disabled={deletingMarkedBets}
-                                  className="text-xs shadow-md"
-                                >
-                                  <Trash2 className="mr-1 h-3 w-3" /> Delete {markedBets.size} Marked
-                                </Button>
-                              </div>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={deleteMarkedBets}
+                                disabled={deletingMarkedBets}
+                                className="text-xs"
+                              >
+                                <Trash2 className="mr-1 h-3 w-3" /> Delete {markedBets.size} Marked
+                              </Button>
                             )}
                           </div>
                           
@@ -5415,11 +5093,7 @@ const AdminPortal = () => {
                   });
 
                   const data = await response.json();
-                  if (data.success && data.duplicate) {
-                    skipCount++;
-                    existingGameIds.add(afGameId);
-                    existingGameIds.add(matchKey);
-                  } else if (data.success) {
+                  if (data.success) {
                     successCount++;
                     // Track so we don't re-add in same batch
                     existingGameIds.add(afGameId);

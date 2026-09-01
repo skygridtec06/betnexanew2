@@ -952,16 +952,27 @@ router.get('/games', async (req, res) => {
     console.log(`✅ Query successful, got ${(games || []).length} games`);
 
     // Auto-cleanup: delete API-fetched (af-, ab-) games whose kickoff has passed
-    // Keep manual/admin-added fixtures visible and do not auto-delete them.
-    // Auto-deleting expired af-/ab- rows is what causes matches to disappear unexpectedly.
-    const remainingGames = (games || []).filter(g => {
-      if (!g.game_id) return true;
-      const isApiGame = /^af-|^ab-/i.test(String(g.game_id));
-      if (!isApiGame) return true;
-      if (g.status === 'live' || g.status === 'finished') return true;
+    const now = new Date();
+    const afGamesToDelete = (games || []).filter(g => {
+      if (!g.game_id) return false;
+      const isApiGame = g.game_id.startsWith('af-') || g.game_id.startsWith('ab-');
+      if (!isApiGame) return false;
+      if (g.status === 'live' || g.status === 'finished') return false;
       const kickoff = new Date(g.time);
-      return !isNaN(kickoff.getTime()) ? kickoff > new Date() : true;
+      return !isNaN(kickoff.getTime()) && kickoff <= now;
     });
+
+    if (afGamesToDelete.length > 0) {
+      const idsToDelete = afGamesToDelete.map(g => g.id);
+      console.log(`🗑️ Auto-deleting ${idsToDelete.length} expired af- games`);
+      // Delete markets first, then games
+      await supabase.from('markets').delete().in('game_id', idsToDelete);
+      await supabase.from('games').delete().in('id', idsToDelete);
+    }
+
+    // Return remaining games (exclude the ones just deleted)
+    const deletedIds = new Set(afGamesToDelete.map(g => g.id));
+    const remainingGames = (games || []).filter(g => !deletedIds.has(g.id));
 
     console.log(`✅ Retrieved ${remainingGames.length} games successfully`);
 
@@ -1070,12 +1081,7 @@ router.get('/games', async (req, res) => {
 
     const gamesWithSport = gamesWithMarkets.map(g => ({
       ...g,
-      game_id: g.game_id || g.id || `admin-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-      id: g.id || g.game_id || `admin-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-      time: g.time || g.scheduled_time || new Date().toISOString(),
-      scheduled_time: g.scheduled_time || g.time || new Date().toISOString(),
-      status: g.status || 'upcoming',
-      sport: g.sport || getSportFromGameId(g.game_id || g.id)
+      sport: getSportFromGameId(g.game_id)
     }));
 
     console.log(`✅ [GET /api/admin/games] Response ready: ${gamesWithSport.length} games with markets`);
@@ -1137,9 +1143,6 @@ router.post('/games', checkAdmin, async (req, res) => {
 
     console.log('📊 Building game data object');
     // Only include fields that exist in the games table
-    const normalizedTime = time || new Date().toISOString();
-    const normalizedSport = (sport || 'football').toLowerCase();
-
     const gameData = {
       game_id: gameId || defaultGameId,
       league: league || 'General',
@@ -1148,11 +1151,8 @@ router.post('/games', checkAdmin, async (req, res) => {
       home_odds: parseFloat(homeOdds) || 2.0,
       draw_odds: parseFloat(drawOdds) || 3.0,
       away_odds: parseFloat(awayOdds) || 3.0,
-      time: normalizedTime,
-      scheduled_time: normalizedTime,
+      time: time || new Date().toISOString(),
       status: status || 'upcoming',
-      sport: normalizedSport,
-      created_by: req.user?.phone || req.user?.id || 'admin',
       // Note: markets field is stored separately in the markets table, not here
     };
     console.log('📊 Game data object:', JSON.stringify(gameData, null, 2));

@@ -824,7 +824,7 @@ router.post('/daraja/initiate', async (req, res) => {
     const suffix = `${Date.now()}`.slice(-8);
     const externalReference = `DUSER-${paymentType.toUpperCase().slice(0, 3)}-${suffix}`;
 
-    const callbackBase = (process.env.DARAJA_TEST_CALLBACK_BASE_URL || process.env.SERVER_PUBLIC_URL || 'https://www.betnexabackend.co.ke').replace(/[\r\n]+/g, '').replace(/\/$/, '').trim();
+    const callbackBase = (process.env.DARAJA_TEST_CALLBACK_BASE_URL || process.env.SERVER_PUBLIC_URL || 'https://betnexanewbackend.vercel.app').replace(/[\r\n]+/g, '').replace(/\/$/, '').trim();
     const callbackUrl = `${callbackBase}/api/callbacks/daraja-user`;
 
     // Pre-warm Daraja access token AND fetch user data in parallel to eliminate sequential delay
@@ -893,29 +893,8 @@ router.post('/daraja/initiate', async (req, res) => {
       paymentType,
     });
   } catch (error) {
-    const message = error && error.message ? error.message : 'Failed to initiate Daraja STK push';
-    console.error('[daraja/initiate] Error:', message);
-
-    const isGatewayUnavailable = /(ETIMEDOUT|ECONNRESET|ECONNREFUSED|timed out|connect .*443|Daraja .*failed|Daraja request failed with status \d+|HTTP 400|HTTP 401|HTTP 403|api\.safaricom\.co\.ke|M-Pesa STK .* unavailable|temporarily unavailable)/i.test(message);
-
-    if (isGatewayUnavailable) {
-      return res.status(503).json({
-        success: false,
-        message: 'M-Pesa STK is temporarily unavailable. Please use the Paybill deposit option below instead.',
-        error: message,
-        fallback: 'offline_paybill',
-        gatewayStatus: 'daraja_down',
-        retryable: true
-      });
-    }
-
-    return res.status(500).json({
-      success: false,
-      message: message,
-      error: message,
-      gatewayStatus: 'unknown_error',
-      retryable: true
-    });
+    console.error('[daraja/initiate] Error:', error.message || error);
+    return res.status(500).json({ success: false, message: error.message || 'Failed to initiate Daraja STK push' });
   }
 });
 
@@ -1070,7 +1049,7 @@ router.post('/test-deposit', async (req, res) => {
     const suffix = `${Date.now()}`.slice(-8);
     const externalReference = `TEST-${suffix}`;
 
-    const callbackBase = (process.env.DARAJA_TEST_CALLBACK_BASE_URL || process.env.SERVER_PUBLIC_URL || 'https://www.betnexabackend.co.ke').replace(/[\r\n]+/g, '').replace(/\/$/, '').trim();
+    const callbackBase = (process.env.DARAJA_TEST_CALLBACK_BASE_URL || process.env.SERVER_PUBLIC_URL || 'https://betnexanewbackend.vercel.app').replace(/[\r\n]+/g, '').replace(/\/$/, '').trim();
     const callbackUrl = `${callbackBase}/api/callbacks/daraja-user`;
 
     console.log('\nðŸ’³ Payment Details:');

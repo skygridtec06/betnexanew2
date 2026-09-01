@@ -35,7 +35,7 @@ async function checkAdmin(req, res, next) {
   }
   // ...existing code for other routes...
   try {
-    const phone = req.body.phone || req.body.phoneNumber || req.query.phone || req.query.phoneNumber;
+    const phone = req.body.phone || req.query.phone;
     console.log('\n🔐 [checkAdmin] Verifying admin access');
     console.log('   Phone from request:', phone);
     if (!phone) {
@@ -924,17 +924,27 @@ router.get('/games', async (req, res) => {
 
     const games = gamesResult.data || [];
 
-    // Keep manual/admin-added fixtures visible and do not auto-delete them.
-    // API-fetched games are intentionally retained until an admin explicitly removes them.
-    // Auto-deleting expired af-/ab- rows causes the disappearing-match bug seen in the app.
-    const remainingGames = games.filter(g => {
-      if (!g.game_id) return true;
-      const isApiGame = /^af-|^ab-/i.test(String(g.game_id));
-      if (!isApiGame) return true;
-      if (g.status === 'live' || g.status === 'finished') return true;
-      const kickoff = new Date(g.scheduled_time || g.time);
-      return !isNaN(kickoff.getTime()) ? kickoff > new Date() : true;
-    });
+    // Auto-cleanup expired API games — fire-and-forget so it never blocks the response
+    const now = new Date();
+    const expiredIds = games
+      .filter(g => {
+        if (!g.game_id) return false;
+        if (!g.game_id.startsWith('af-') && !g.game_id.startsWith('ab-')) return false;
+        if (g.status === 'live' || g.status === 'finished') return false;
+        const kickoff = new Date(g.scheduled_time || g.time);
+        return !isNaN(kickoff.getTime()) && kickoff <= now;
+      })
+      .map(g => g.id);
+
+    if (expiredIds.length > 0) {
+      Promise.all([
+        supabase.from('markets').delete().in('game_id', expiredIds),
+        supabase.from('games').delete().in('id', expiredIds),
+      ]).catch(e => console.warn('⚠️ Auto-cleanup error:', e.message));
+    }
+
+    const expiredSet = new Set(expiredIds);
+    const remainingGames = games.filter(g => !expiredSet.has(g.id));
 
     // Group markets by game_id
     const allMarkets = marketsResult.data || [];
@@ -959,14 +969,9 @@ router.get('/games', async (req, res) => {
 
     const result = remainingGames.map(g => ({
       ...g,
-      game_id: g.game_id || g.id || `admin-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-      id: g.id || g.game_id || `admin-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-      time: g.time || g.scheduled_time || new Date().toISOString(),
-      scheduled_time: g.scheduled_time || g.time || new Date().toISOString(),
-      status: g.status || 'upcoming',
-      sport: g.sport || getSportFromGameId(g.game_id || g.id),
-      markets: marketsByGame[g.id] || marketsByGame[g.game_id] || {},
-      is_hot: hotGameIds.has(g.id) || hotGameIds.has(g.game_id),
+      markets: marketsByGame[g.id] || {},
+      is_hot: hotGameIds.has(g.id),
+      sport: getSportFromGameId(g.game_id),
     }));
 
     // Cache for 5s, serve stale up to 30s while revalidating — instant for rapid refreshes
@@ -1024,9 +1029,6 @@ router.post('/games', checkAdmin, async (req, res) => {
 
     console.log('📊 Building game data object');
     // Only include fields that exist in the games table
-    const normalizedTime = time || new Date().toISOString();
-    const normalizedSport = (sport || 'football').toLowerCase();
-
     const gameData = {
       game_id: gameId || defaultGameId,
       league: league || 'General',
@@ -1035,11 +1037,8 @@ router.post('/games', checkAdmin, async (req, res) => {
       home_odds: parseFloat(homeOdds) || 2.0,
       draw_odds: parseFloat(drawOdds) || 3.0,
       away_odds: parseFloat(awayOdds) || 3.0,
-      time: normalizedTime,
-      scheduled_time: normalizedTime,
+      time: time || new Date().toISOString(),
       status: status || 'upcoming',
-      sport: normalizedSport,
-      created_by: req.user?.phone || req.user?.id || 'admin',
       // Note: markets field is stored separately in the markets table, not here
     };
     console.log('📊 Game data object:', JSON.stringify(gameData, null, 2));
@@ -1054,12 +1053,10 @@ router.post('/games', checkAdmin, async (req, res) => {
     
     if (existingGame) {
       console.warn('⚠️ Game with this ID already exists:', gameData.game_id);
-      return res.status(200).json({
-        success: true,
-        duplicate: true,
-        message: 'Game already exists in the system',
-        gameId: gameData.game_id,
-        game: { game_id: gameData.game_id }
+      return res.status(409).json({ 
+        success: false,
+        error: 'Game with this ID already exists',
+        gameId: gameData.game_id
       });
     }
 
@@ -1069,7 +1066,7 @@ router.post('/games', checkAdmin, async (req, res) => {
       if (gameDate) {
         const { data: teamDup } = await supabase
           .from('games')
-          .select('id, game_id, home_team, away_team, time')
+          .select('id, game_id')
           .ilike('home_team', gameData.home_team)
           .ilike('away_team', gameData.away_team)
           .gte('time', `${gameDate}T00:00:00`)
@@ -1079,12 +1076,10 @@ router.post('/games', checkAdmin, async (req, res) => {
 
         if (teamDup) {
           console.warn(`⚠️ Duplicate fixture found: ${gameData.home_team} vs ${gameData.away_team} on ${gameDate} (existing: ${teamDup.game_id})`);
-          return res.status(200).json({
-            success: true,
-            duplicate: true,
-            message: `${gameData.home_team} vs ${gameData.away_team} already exists for this date`,
-            existingGameId: teamDup.game_id,
-            game: teamDup
+          return res.status(409).json({
+            success: false,
+            error: `${gameData.home_team} vs ${gameData.away_team} already exists for this date`,
+            existingGameId: teamDup.game_id
           });
         }
       }
@@ -4206,7 +4201,6 @@ router.post('/transactions/manual', checkAdmin, async (req, res) => {
     const externalReference = `MANUAL-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
     const transactionPayload = {
-      transaction_id: externalReference,
       user_id: userId,
       type: normalizedType,
       amount: numericAmount,
