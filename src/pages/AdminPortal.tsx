@@ -5415,7 +5415,11 @@ const AdminPortal = () => {
                   });
 
                   const data = await response.json();
-                  if (data.success) {
+                  if (data.success && data.duplicate) {
+                    skipCount++;
+                    existingGameIds.add(afGameId);
+                    existingGameIds.add(matchKey);
+                  } else if (data.success) {
                     successCount++;
                     // Track so we don't re-add in same batch
                     existingGameIds.add(afGameId);

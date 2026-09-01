@@ -47,7 +47,7 @@ export const FetchGamesFetchModal = ({ isOpen, onClose, onExecute }: FetchGamesF
       const data = await response.json();
 
       if (!data.success) {
-        setErrorMsg(data.error || 'Failed to fetch games');
+        setErrorMsg(data.details || data.error || 'Failed to fetch games');
         setStep('error');
         return;
       }
@@ -177,7 +177,7 @@ export const FetchGamesFetchModal = ({ isOpen, onClose, onExecute }: FetchGamesF
                   ℹ️ No games found
                 </p>
                 <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
-                  No prematch games with valid odds were found for today.
+                  No upcoming games were returned by API Football.
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
                   Try again tomorrow or check API Football for available matches.

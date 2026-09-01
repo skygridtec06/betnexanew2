@@ -407,6 +407,9 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
       }
 
       const json = await resp.json();
+      if (json.errors && Object.keys(json.errors).length > 0) {
+        throw new Error(`API Football error on ${path}: ${Object.values(json.errors).join('; ')}`);
+      }
       console.log(`   ✅ API Response received`);
       return json;
     }
@@ -440,16 +443,25 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
     });
     console.log(`   📅 Dates to fetch: ${datesToFetch.join(', ')}`);
 
+    // API-Football supports a date range for fixtures. One request avoids exhausting
+    // the daily free-tier allowance before the preview can be completed.
+    const fixturesJson = await apiGetTest('/fixtures', {
+      from: datesToFetch[0],
+      to: datesToFetch[datesToFetch.length - 1],
+      timezone: TZ,
+    });
+    const fixturesByDate = new Map();
+    for (const fixture of fixturesJson.response || []) {
+      const fixtureDate = fixture?.fixture?.date?.slice(0, 10);
+      if (!fixtureDate) continue;
+      if (!fixturesByDate.has(fixtureDate)) fixturesByDate.set(fixtureDate, []);
+      fixturesByDate.get(fixtureDate).push(fixture);
+    }
+
     for (const dateStr of datesToFetch) {
       try {
-        // Step 1: Fetch all fixtures for this date (simple call — page/per_page not supported)
         console.log(`\n📅 Fetching fixtures for ${dateStr}...`);
-
-        const fixturesJson = await apiGetTest('/fixtures', {
-          date: dateStr,
-          timezone: TZ,
-        });
-        const allFixtures = fixturesJson.response || [];
+        const allFixtures = fixturesByDate.get(dateStr) || [];
 
         stats.totalFixturesSeen += allFixtures.length;
         console.log(`   📊 Total fixtures on ${dateStr}: ${allFixtures.length}`);
@@ -469,19 +481,23 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
           continue;
         }
 
-        // Step 2: Fetch odds in bulk for this date (single call)
-        console.log(`\n📈 Fetching bulk odds for ${dateStr}...`);
-        const allOddsPages = await apiGetAllPages('/odds', { date: dateStr, timezone: TZ });
-        stats.oddsEntriesSeen += allOddsPages.length;
-        console.log(`   📊 Odds entries for ${dateStr}: ${allOddsPages.length}`);
-
         // Build a map: fixtureId -> odds rows
         const oddsByFixture = new Map();
-        for (const entry of allOddsPages) {
-          const fid = entry?.fixture?.id;
-          if (!fid) continue;
-          if (!oddsByFixture.has(fid)) oddsByFixture.set(fid, []);
-          oddsByFixture.get(fid).push(entry);
+        if (dateStr === datesToFetch[0]) {
+          console.log(`\n📈 Fetching bulk odds for ${dateStr}...`);
+          try {
+            const allOddsPages = await apiGetAllPages('/odds', { date: dateStr, timezone: TZ });
+            stats.oddsEntriesSeen += allOddsPages.length;
+            console.log(`   📊 Odds entries for ${dateStr}: ${allOddsPages.length}`);
+            for (const entry of allOddsPages) {
+              const fid = entry?.fixture?.id;
+              if (!fid) continue;
+              if (!oddsByFixture.has(fid)) oddsByFixture.set(fid, []);
+              oddsByFixture.get(fid).push(entry);
+            }
+          } catch (oddsError) {
+            console.warn(`⚠️ Unable to fetch API odds for ${dateStr}; using fallback odds:`, oddsError.message);
+          }
         }
 
         // Step 3: Process each prematch fixture and match with odds
@@ -636,7 +652,7 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
     console.error('Stack:', error.stack);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch games from API Football',
+      error: 'Unable to fetch games from API Football',
       details: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
