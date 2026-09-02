@@ -353,7 +353,7 @@ function generateSeededOdds(fixtureId) {
 // POST: Fetch preview - Get games from API Football with OPTIMIZATIONS for free tier
 router.post('/fetch-preview', checkAdmin, async (req, res) => {
   try {
-    const DAYS_TO_FETCH = req.body.days || 3; // Default: 3 days
+    const DAYS_TO_FETCH = Math.min(Math.max(parseInt(req.body.days, 10) || 5, 1), 15); // Default: 5 days (~hundreds of matches, ~10 API calls), max: 15 (~30 API calls, stays within free-tier 100/day quota)
     console.log(`\n🔍 [API Football Fetch Preview - OPTIMIZED] Fetching prematch games for the next ${DAYS_TO_FETCH} days...`);
     console.log(`   📊 Optimized for FREE TIER: bulk odds fetching, pagination, smart filtering`);
 
@@ -582,7 +582,7 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
       games: games,
       optimization_notes: '✅ Optimized for free tier: pagination (100/page), bulk odds, reduced per-fixture calls',
       next_step: 'Call /api/admin/fetch-api-football/execute with the games to add them to the site',
-      customize_days: 'Send { "days": N } in request body to fetch N days (default: 15, max: 30)'
+      customize_days: 'Send { "days": N } in request body to fetch N days (default: 5, max: 15)'
     });
 
   } catch (error) {
