@@ -15,7 +15,7 @@ VITE_API_URL=https://www.betnexabackend.co.ke
 SERVER_PUBLIC_URL=https://www.betnexabackend.co.ke
 
 ## Third-Party APIs
-API_FOOTBALL_KEY=bf5af370a651dae75d8920b3b8102fe6
+API_FOOTBALL_KEY=afc8a85f7408df5bcfbc712aeb8e7453
 
 ## SMS Configuration
 TEXTSMS_API_KEY=5e8a74e0f8eed3e7a9896401a91bc9a2
@@ -47,7 +47,7 @@ DARAJA_TEST_TRANSACTION_TYPE=CustomerPayBillOnline
 DARAJA_TEST_CALLBACK_BASE_URL=https://www.betnexabackend.co.ke
 
 ## APIs
-API_FOOTBALL_KEY=bf5af370a651dae75d8920b3b8102fe6
+API_FOOTBALL_KEY=afc8a85f7408df5bcfbc712aeb8e7453
 
 ## SMS Configuration
 TEXTSMS_API_KEY=5e8a74e0f8eed3e7a9896401a91bc9a2

@@ -737,7 +737,7 @@ router.post('/fetch-preview/basketball', checkAdmin, async (req, res) => {
   try {
     console.log(`\n🏀 [API Basketball Fetch Preview] Fetching basketball games for the next 3 days...`);
 
-    const BBALL_KEY = API_KEY || 'bf5af370a651dae75d8920b3b8102fe6';
+    const BBALL_KEY = API_KEY || 'afc8a85f7408df5bcfbc712aeb8e7453';
 
     if (!BBALL_KEY) {
       return res.status(500).json({ success: false, error: 'API key not configured' });
