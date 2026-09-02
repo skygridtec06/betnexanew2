@@ -313,7 +313,7 @@ router.post('/fetch-preview', checkAdmin, async (req, res) => {
     console.log(`\n🔍 [API Football Fetch Preview] Fetching prematch games for the next ${DAYS_TO_FETCH} days...`);
 
     // Use the test API key for this fetch preview endpoint
-    const TEST_API_KEY = '49f4155b78d58351ed95b5c3bbcebd9e';
+    const TEST_API_KEY = 'bf5af370a651dae75d8920b3b8102fe6';
     
     if (!TEST_API_KEY) {
       return res.status(500).json({
@@ -698,7 +698,7 @@ router.post('/fetch-preview/basketball', checkAdmin, async (req, res) => {
   try {
     console.log(`\n🏀 [API Basketball Fetch Preview] Fetching basketball games for the next 3 days...`);
 
-    const BBALL_KEY = API_KEY || '49f4155b78d58351ed95b5c3bbcebd9e';
+    const BBALL_KEY = API_KEY || 'bf5af370a651dae75d8920b3b8102fe6';
 
     if (!BBALL_KEY) {
       return res.status(500).json({ success: false, error: 'API key not configured' });
