@@ -35,7 +35,7 @@ async function checkAdmin(req, res, next) {
   }
   // ...existing code for other routes...
   try {
-    const phone = req.body.phone || req.query.phone;
+    const phone = req.body.phone || req.body.phoneNumber || req.query.phone || req.query.phoneNumber;
     console.log('\n🔐 [checkAdmin] Verifying admin access');
     console.log('   Phone from request:', phone);
     if (!phone) {
@@ -4201,6 +4201,7 @@ router.post('/transactions/manual', checkAdmin, async (req, res) => {
     const externalReference = `MANUAL-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
     const transactionPayload = {
+      transaction_id: externalReference,
       user_id: userId,
       type: normalizedType,
       amount: numericAmount,

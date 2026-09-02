@@ -3,7 +3,7 @@ import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Trash2, CheckCircle, XCircle, Clock, DollarSign, Users, UserPlus, BarChart3, Trophy, Settings, RefreshCw, Edit2, Save, ArrowDown, ArrowUp, Play, Pause, Square, Lock, Unlock, Shield, Zap, Upload, Image as ImageIcon, Loader2, Megaphone, Calendar, Download, Ban, Flame, Globe } from "lucide-react";
+import { Plus, Trash2, CheckCircle, XCircle, Clock, DollarSign, Users, UserPlus, BarChart3, Trophy, Settings, RefreshCw, Edit2, Save, ArrowDown, ArrowUp, Play, Pause, Square, Lock, Unlock, Shield, Zap, Upload, Image as ImageIcon, Loader2, Megaphone, Calendar, Download, Ban, Flame } from "lucide-react";
 import { type MatchMarkets } from "@/components/MatchCard";
 import { useMatches } from "@/context/MatchContext";
 import { useBets, type PlacedBet } from "@/context/BetContext";
@@ -20,7 +20,6 @@ import { formatDateInEAT, formatTransactionDateInEAT, formatTimeInEAT } from "@/
 import { MatchEventEditor } from "@/components/MatchEventEditor";
 import { ActiveMembers } from "@/components/ActiveMembers";
 import { FetchGamesFetchModal } from "@/components/FetchGamesFetchModal";
-import { FetchOddsApiModal } from "@/components/FetchOddsApiModal";
 import { EarningsCalculator } from "@/components/EarningsCalculator";
 
 const marketLabels: Record<string, string> = {
@@ -94,7 +93,6 @@ const AdminPortal = () => {
   const [showAddGame, setShowAddGame] = useState(false);
   const [showDarajaTestModal, setShowDarajaTestModal] = useState(false);
   const [showFetchGamesModal, setShowFetchGamesModal] = useState(false);
-  const [showFetchOddsApiModal, setShowFetchOddsApiModal] = useState(false);
   const [showBetDetailsDialog, setShowBetDetailsDialog] = useState(false);
   const [selectedBetDetails, setSelectedBetDetails] = useState<PlacedBet | null>(null);
   const [adminTab, setAdminTab] = useState("games");
@@ -172,6 +170,7 @@ const AdminPortal = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          phone: loggedInUser?.phone || manualTransactionForm.phoneNumber || manualTransactionUser.phone,
           userId: manualTransactionUser.id,
           type: manualTransactionForm.type,
           amount,
@@ -2513,9 +2512,6 @@ const AdminPortal = () => {
                 </Button>
                 <Button variant="hero" size="sm" onClick={() => { setShowImageImport(!showImageImport); setShowAddGame(false); setImportResult(null); }}>
                   <ImageIcon className="mr-1 h-4 w-4" /> Import from Image
-                </Button>
-                <Button variant="hero" size="sm" onClick={() => setShowFetchOddsApiModal(true)}>
-                  <Globe className="mr-1 h-4 w-4" /> Add Matches
                 </Button>
                 <Button variant="hero" size="sm" onClick={() => { setShowAddGame(!showAddGame); setShowImageImport(false); }}>
                   <Plus className="mr-1 h-4 w-4" /> Add Fixture
@@ -5141,107 +5137,6 @@ const AdminPortal = () => {
             } catch (error) {
               console.error('Error executing games:', error);
               alert('Failed to add games. Check console for details.');
-            }
-          }}
-        />
-
-        {/* Add Matches (The Odds API) Modal */}
-        <FetchOddsApiModal
-          isOpen={showFetchOddsApiModal}
-          onClose={() => setShowFetchOddsApiModal(false)}
-          onExecute={async (games) => {
-            try {
-              const apiUrl = import.meta.env.VITE_API_URL || 'https://www.betnexabackend.co.ke';
-
-              // Step 1: Fetch existing games to check for duplicates
-              let existingGameIds = new Set<string>();
-              try {
-                const existingRes = await fetch(`${apiUrl}/api/admin/games`);
-                const existingData = await existingRes.json();
-                if (existingData.success && existingData.games) {
-                  for (const g of existingData.games) {
-                    if (g.game_id) existingGameIds.add(g.game_id);
-                    const matchKey = `${g.home_team}|${g.away_team}|${(g.time || '').split('T')[0]}`.toLowerCase();
-                    existingGameIds.add(matchKey);
-                  }
-                }
-              } catch (e) {
-                console.warn('Could not fetch existing games for dedup check:', e);
-              }
-
-              let successCount = 0;
-              let failCount = 0;
-              let skipCount = 0;
-
-              for (const game of games) {
-                try {
-                  const oaGameId = `oa-${game.api_fixture_id}`;
-                  const matchKey = `${game.home_team}|${game.away_team}|${(game.time_utc || game.time_eat || '').split('T')[0]}`.toLowerCase();
-
-                  if (existingGameIds.has(oaGameId) || existingGameIds.has(matchKey)) {
-                    skipCount++;
-                    console.log(`⏭️ Skipping duplicate: ${game.home_team} vs ${game.away_team}`);
-                    continue;
-                  }
-
-                  const response = await fetch(`${apiUrl}/api/admin/games`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      phone: loggedInUser.phone,
-                      gameId: oaGameId,
-                      league: game.league,
-                      homeTeam: game.home_team,
-                      awayTeam: game.away_team,
-                      homeOdds: game.home_odds,
-                      drawOdds: game.draw_odds,
-                      awayOdds: game.away_odds,
-                      time: game.time_eat || game.time_utc,
-                      status: 'upcoming',
-                      markets: game.markets
-                    })
-                  });
-
-                  const data = await response.json();
-                  if (data.success) {
-                    successCount++;
-                    existingGameIds.add(oaGameId);
-                    existingGameIds.add(matchKey);
-                    const gameData: GameOdds = {
-                      id: data.game.game_id || data.game.id,
-                      league: data.game.league || '',
-                      homeTeam: data.game.home_team,
-                      awayTeam: data.game.away_team,
-                      homeOdds: parseFloat(data.game.home_odds),
-                      drawOdds: parseFloat(data.game.draw_odds),
-                      awayOdds: parseFloat(data.game.away_odds),
-                      time: data.game.time || game.time_eat,
-                      status: data.game.status || 'upcoming',
-                      markets: data.game.markets || game.markets || {},
-                    };
-                    addGame(gameData);
-                  } else {
-                    failCount++;
-                    console.error(`Failed to add ${game.home_team} vs ${game.away_team}:`, data.error);
-                  }
-                } catch (error) {
-                  failCount++;
-                  console.error(`Error adding ${game.home_team} vs ${game.away_team}:`, error);
-                }
-              }
-
-              const parts = [`✅ Added ${successCount} matches`];
-              if (skipCount > 0) parts.push(`${skipCount} duplicates skipped`);
-              if (failCount > 0) parts.push(`${failCount} failed`);
-              alert(parts.join(', ') + '!');
-              setShowFetchOddsApiModal(false);
-
-              setTimeout(() => {
-                refreshGames();
-              }, 500);
-            } catch (error) {
-              console.error('Error executing matches:', error);
-              alert('Failed to add matches. Check console for details.');
             }
           }}
         />
