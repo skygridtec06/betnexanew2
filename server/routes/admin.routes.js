@@ -924,28 +924,6 @@ router.get('/games', async (req, res) => {
 
     const games = gamesResult.data || [];
 
-    // Auto-cleanup expired API games — fire-and-forget so it never blocks the response
-    const now = new Date();
-    const expiredIds = games
-      .filter(g => {
-        if (!g.game_id) return false;
-        if (!g.game_id.startsWith('af-') && !g.game_id.startsWith('ab-')) return false;
-        if (g.status === 'live' || g.status === 'finished') return false;
-        const kickoff = new Date(g.scheduled_time || g.time);
-        return !isNaN(kickoff.getTime()) && kickoff <= now;
-      })
-      .map(g => g.id);
-
-    if (expiredIds.length > 0) {
-      Promise.all([
-        supabase.from('markets').delete().in('game_id', expiredIds),
-        supabase.from('games').delete().in('id', expiredIds),
-      ]).catch(e => console.warn('⚠️ Auto-cleanup error:', e.message));
-    }
-
-    const expiredSet = new Set(expiredIds);
-    const remainingGames = games.filter(g => !expiredSet.has(g.id));
-
     // Group markets by game_id
     const allMarkets = marketsResult.data || [];
     const marketsByGame = {};
@@ -967,7 +945,7 @@ router.get('/games', async (req, res) => {
       return 'football';
     }
 
-    const result = remainingGames.map(g => ({
+    const result = games.map(g => ({
       ...g,
       markets: marketsByGame[g.id] || {},
       is_hot: hotGameIds.has(g.id),

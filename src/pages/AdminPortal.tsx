@@ -5086,7 +5086,7 @@ const AdminPortal = () => {
                       homeOdds: game.home_odds,
                       drawOdds: game.draw_odds,
                       awayOdds: game.away_odds,
-                      time: game.time_eat || game.time_utc,
+                      time: game.time_utc || game.time_eat,
                       status: 'upcoming',
                       markets: game.markets
                     })
@@ -5107,7 +5107,7 @@ const AdminPortal = () => {
                       homeOdds: parseFloat(data.game.home_odds),
                       drawOdds: parseFloat(data.game.draw_odds),
                       awayOdds: parseFloat(data.game.away_odds),
-                      time: data.game.time || game.time_eat,
+                      time: data.game.time || game.time_utc || game.time_eat,
                       status: data.game.status || 'upcoming',
                       markets: data.game.markets || game.markets || {},
                     };
