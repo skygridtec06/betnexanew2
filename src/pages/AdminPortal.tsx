@@ -35,6 +35,17 @@ const marketLabels: Record<string, string> = {
   cs41: "CS 4-1", cs14: "CS 1-4", cs42: "CS 4-2", cs24: "CS 2-4", cs43: "CS 4-3", cs34: "CS 3-4", cs44: "CS 4-4",
 };
 
+const isFutureKickoff = (time: string) => {
+  const kickoffMs = new Date(time).getTime();
+  return !Number.isNaN(kickoffMs) && kickoffMs > Date.now();
+};
+
+const isApiGameId = (gameId: string) => /^(af|ab|bb|tn|ck|bx)-/i.test(gameId || '');
+
+const isVisibleToUsers = (game: GameOdds) =>
+  game.status === 'live' ||
+  (game.status === 'upcoming' && (isFutureKickoff(game.time) || !isApiGameId(game.id)));
+
 // Helper function to sort games by upcoming kickoff time (closest first)
 const sortGamesByKickoffTime = (gamesToSort: any[]) => {
   return [...gamesToSort].sort((a, b) => {
@@ -2799,7 +2810,7 @@ const AdminPortal = () => {
             <div className="space-y-3">
               {/* ── Select-all / bulk-delete toolbar (upcoming + live games only) ── */}
               {(() => {
-                const selectableGames = sortGamesByKickoffTime(games).filter(g => g.status === 'upcoming' || g.status === 'live');
+                const selectableGames = sortGamesByKickoffTime(games).filter(g => g.status === 'upcoming' && isVisibleToUsers(g));
                 const allSelected = selectableGames.length > 0 && selectableGames.every(g => markedGames.has(g.id));
                 const someSelected = markedGames.size > 0;
                 if (selectableGames.length === 0) return null;
@@ -2839,7 +2850,7 @@ const AdminPortal = () => {
                 );
               })()}
 
-              {sortGamesByKickoffTime(games).map((game) => (
+              {sortGamesByKickoffTime(games.filter(isVisibleToUsers)).map((game) => (
                 <div key={game.id} className="rounded-xl border border-border/50 bg-card p-4">
                   {isApiManagedGame(game.id) && (
                     <div className="mb-3 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-xs font-medium text-blue-300">
@@ -2848,7 +2859,7 @@ const AdminPortal = () => {
                   )}
                   <div className="flex items-center justify-between">
                     {/* Checkbox — only for upcoming/live games */}
-                    {(game.status === 'upcoming' || game.status === 'live') && (
+                    {game.status === 'upcoming' && (
                       <input
                         type="checkbox"
                         className="mr-3 h-4 w-4 flex-shrink-0 cursor-pointer accent-primary"
