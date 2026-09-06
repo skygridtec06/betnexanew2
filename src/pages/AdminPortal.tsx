@@ -5036,12 +5036,12 @@ const AdminPortal = () => {
           onClose={() => setShowFetchGamesModal(false)}
           onExecute={async (games) => {
             try {
-              const apiUrl = buildApiUrl('/api');
+              const gamesEndpoint = buildApiUrl('/api/admin/games');
               
               // Step 1: Fetch existing games to check for duplicates
               let existingGameIds = new Set<string>();
               try {
-                const existingRes = await fetch(`${apiUrl}/api/admin/games`);
+                const existingRes = await fetch(gamesEndpoint);
                 const existingData = await existingRes.json();
                 if (existingData.success && existingData.games) {
                   for (const g of existingData.games) {
@@ -5074,7 +5074,7 @@ const AdminPortal = () => {
                   }
 
                   // Map snake_case API response to camelCase for admin API
-                  const response = await fetch(`${apiUrl}/api/admin/games`, {
+                  const response = await fetch(gamesEndpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
