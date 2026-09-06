@@ -850,7 +850,9 @@ const AdminPortal = () => {
     if (!newGame.homeTeam || !newGame.awayTeam) return;
     
     // Convert kickoffDateTime to ISO string
-    let kickoffTime = new Date().toISOString();
+    // A missing kickoff must still be visible in the upcoming list after the
+    // post-save refresh, so default it slightly into the future.
+    let kickoffTime = new Date(Date.now() + 60 * 60 * 1000).toISOString();
     if (newGame.kickoffDateTime) {
       kickoffTime = new Date(newGame.kickoffDateTime).toISOString();
     }
@@ -1253,7 +1255,7 @@ const AdminPortal = () => {
       const a = parseFloat(pg.awayOdds) || 3.0;
       const kickoffTime = pg.kickoffDateTime
         ? new Date(pg.kickoffDateTime + ':00+03:00').toISOString() // EAT = UTC+3
-        : new Date().toISOString();
+        : new Date(Date.now() + 60 * 60 * 1000).toISOString();
       const markets: Record<string, number> = { home: h, draw: d, away: a };
       const response = await fetch(buildApiUrl('/api/admin/games'), {
         method: 'POST',

@@ -1038,7 +1038,8 @@ router.post('/games', checkAdmin, async (req, res) => {
       home_odds: parseFloat(homeOdds) || 2.0,
       draw_odds: parseFloat(drawOdds) || 3.0,
       away_odds: parseFloat(awayOdds) || 3.0,
-      time: time || new Date().toISOString(),
+      // Keep manually created games visible as upcoming when no kickoff was supplied.
+      time: time || new Date(Date.now() + 60 * 60 * 1000).toISOString(),
       status: status || 'upcoming',
       // Note: markets field is stored separately in the markets table, not here
     };

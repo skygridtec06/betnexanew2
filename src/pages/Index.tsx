@@ -58,6 +58,8 @@ const isFutureKickoff = (time: string) => {
   return !Number.isNaN(kickoffMs) && kickoffMs > Date.now();
 };
 
+const isApiManagedGame = (gameId: string) => /^af-|^ab-|^bb-|^tn-|^ck-|^bx-/i.test(gameId || '');
+
 const Index = ({ sport = 'football' }: IndexProps) => {
   const { isLoggedIn } = useUser();
   const [betSlip, setBetSlip] = useState<BetSlipItem[]>(() => {
@@ -240,7 +242,10 @@ const Index = ({ sport = 'football' }: IndexProps) => {
     filteredGames.filter((g) => g.isHot && g.status !== "finished")
   );
   const upcomingGames = sortGamesByKickoffTime(
-    filteredGames.filter((g) => g.status === "upcoming" && isFutureKickoff(g.time))
+    filteredGames.filter((g) => (
+      g.status === "upcoming" &&
+      (isFutureKickoff(g.time) || !isApiManagedGame(g.id))
+    ))
   );
   const liveGames = filteredGames.filter((g) => g.status === "live");
   const endedGames = sortEndedGames(filteredGames.filter((g) => g.status === "finished"));
