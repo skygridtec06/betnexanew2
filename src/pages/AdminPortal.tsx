@@ -21,6 +21,7 @@ import { MatchEventEditor } from "@/components/MatchEventEditor";
 import { ActiveMembers } from "@/components/ActiveMembers";
 import { FetchGamesFetchModal } from "@/components/FetchGamesFetchModal";
 import { EarningsCalculator } from "@/components/EarningsCalculator";
+import { buildApiUrl } from "@/lib/api";
 
 const marketLabels: Record<string, string> = {
   bttsYes: "BTTS Yes", bttsNo: "BTTS No",
@@ -875,8 +876,7 @@ const AdminPortal = () => {
     }
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://www.betnexabackend.co.ke';
-      const response = await fetch(`${apiUrl}/api/admin/games`, {
+      const response = await fetch(buildApiUrl('/api/admin/games'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -966,9 +966,7 @@ const AdminPortal = () => {
         alert("✅ Game added with your custom market odds!");
         
         // Refresh games to sync with all users
-        setTimeout(() => {
-          refreshGames();
-        }, 500);
+        await refreshGames();
       } else {
         console.error('API Error:', data);
         alert(`Error: ${data.error || 'Failed to add game'}`);
@@ -1257,8 +1255,7 @@ const AdminPortal = () => {
         ? new Date(pg.kickoffDateTime + ':00+03:00').toISOString() // EAT = UTC+3
         : new Date().toISOString();
       const markets: Record<string, number> = { home: h, draw: d, away: a };
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://www.betnexabackend.co.ke';
-      const response = await fetch(`${apiUrl}/api/admin/games`, {
+      const response = await fetch(buildApiUrl('/api/admin/games'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: loggedInUser.phone, league: pg.league, homeTeam: pg.homeTeam, awayTeam: pg.awayTeam, homeOdds: h, drawOdds: d, awayOdds: a, time: kickoffTime, status: 'upcoming', markets }),
@@ -1266,7 +1263,7 @@ const AdminPortal = () => {
       const data = await response.json();
       if (data.success) {
         setParsedImportGames(prev => prev.map((g, i) => i === gameIdx ? { ...g, saving: false, saved: true } : g));
-        refreshGames();
+        await refreshGames();
       } else {
         throw new Error(data.error || 'Failed');
       }
@@ -5037,7 +5034,7 @@ const AdminPortal = () => {
           onClose={() => setShowFetchGamesModal(false)}
           onExecute={async (games) => {
             try {
-              const apiUrl = import.meta.env.VITE_API_URL || 'https://www.betnexabackend.co.ke';
+              const apiUrl = buildApiUrl('/api');
               
               // Step 1: Fetch existing games to check for duplicates
               let existingGameIds = new Set<string>();
@@ -5184,7 +5181,3 @@ const AdminPortal = () => {
 };
 
 export default AdminPortal;
-
-
-
-

@@ -974,8 +974,9 @@ router.get('/games', async (req, res) => {
       sport: getSportFromGameId(g.game_id),
     }));
 
-    // Cache for 5s, serve stale up to 30s while revalidating — instant for rapid refreshes
-    res.set('Cache-Control', 'public, max-age=5, stale-while-revalidate=30');
+    // Game lists must reflect admin mutations immediately; CDN caching can reintroduce
+    // a pre-insert response and make a newly created game appear to vanish.
+    res.set('Cache-Control', 'no-store');
     res.json({ success: true, games: result });
   } catch (error) {
     console.error('❌ Get games error:', error.message || error);

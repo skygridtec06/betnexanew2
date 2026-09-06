@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Loader2, Download, CheckCircle, AlertCircle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { buildApiUrl } from '@/lib/api';
 
 interface GamePreview {
   api_fixture_id: number;
@@ -32,10 +33,9 @@ export const FetchGamesFetchModal = ({ isOpen, onClose, onExecute }: FetchGamesF
     setStep('fetching');
     setErrorMsg('');
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://www.betnexabackend.co.ke';
       const adminPhone = localStorage.getItem("adminPhone") || localStorage.getItem("userPhone") || "0712345678";
       
-      const response = await fetch(`${apiUrl}/api/admin/fetch-api-football/fetch-preview`, {
+      const response = await fetch(buildApiUrl('/api/admin/fetch-api-football/fetch-preview'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -241,5 +241,4 @@ export const FetchGamesFetchModal = ({ isOpen, onClose, onExecute }: FetchGamesF
     </Dialog>
   );
 };
-
 
